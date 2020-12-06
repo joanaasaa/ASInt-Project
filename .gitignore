@@ -1,0 +1,4 @@
+# Specific files/folders
+__pycache__/
+aux/__pycache__/
+VQAdb.sqlite

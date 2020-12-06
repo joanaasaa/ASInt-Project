@@ -1,0 +1,54 @@
+{% extends 'layout.html' %}
+
+{% block script %}
+
+<script>
+	$(document).ready(function () {
+		$("#dashboard_button").click(
+			function () {
+				console.log("Dashboard button was clicked")
+				window.location.href = "{{ url_for("Dashboard") }}";
+			}
+		)
+
+		$("#logout_button").click(
+			function () {
+				console.log("Log out button was clicked")
+				window.location.href = "{{ url_for("LogOut") }}";
+			}
+		)
+
+		$("#login_button").click(
+			function () {
+				console.log("Log in button was clicked")
+				window.location.href = "{{ url_for("fenix-example.login") }}";
+			}
+		)
+	});
+</script>
+
+{% endblock %}
+
+{% block body %}
+
+<body>
+	<h1>Welcome to VQA By Joana</h1>
+
+	{% if logged_in %}
+
+	<p>You are logged in!</p>
+	<button class="ui button" id="dashboard_button">Go to dashboard</button>
+	<br>
+	<br>
+	<button class="ui button" id="logout_button">Log out</button>
+
+	{% else %}
+
+	<p>Log in using Fenix</p>
+	<button class="ui button" id="login_button">Log in</button>
+
+	{% endif %}
+
+</body>
+
+{% endblock %}
