@@ -3,7 +3,7 @@
 {% block script %}
 
 <script>
-    function getVideos(username) {
+    function refreshVideos(username) {
         $.ajax({
             url: '/API/' + username + '/videos/',
             type: 'GET',
@@ -16,7 +16,7 @@
                 // Adding videos to videos table
                 data["user_videos"].forEach(v => {
                     $('#videos_menu1').
-                        append('<a class="item" href="' + v["url"] + '">' + v["desc"] + '</a>');
+                        append('<a class="item" href="/videos/' + v["id"] + '">' + v["desc"] + '</a>');
                 });
 
                 // Clearing other users' videos table
@@ -30,14 +30,50 @@
         })
     }
 
+    function addNewVideo(url, desc, username) {
+        let video_data = { 'url': url, 'desc': desc }
+        $.ajax({
+            url: '/API/' + username + '/videos/',
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(video_data),
+            success: function (data) {
+                console.log(data)
+                if (data["video_id"] == null) {
+                    console.log("E      Video couldn't be added to the database".red)
+                }
+                else {
+                    console.log("I      Video with ID " + data["video_id"] + " was successfuly added to the database")
+                    refreshVideos("{{ username }}")
+                    $("#url_input").val("")
+                    $("#desc_input").val("")
+                }
+            },
+        })
+    }
+
     $(document).ready(function () {
-        getVideos('{{ username }}')
+        refreshVideos('{{ username }}')
 
         $("#update_videos_button").click(
-            function(){
-                getVideos('{{ username }}')
+            function () {
+                refreshVideos('{{ username }}')
             }
-        )
+        );
+
+        $("#new_video_button").click(
+            function () {
+                url = $("#url_input").val()
+                desc = $("#desc_input").val()
+                if (url == "" || desc == "") {
+                    console.log("W      One of the fields is empty. Check which one and try again!")
+                }
+                else {
+                    addNewVideo(url, desc, "{{ username }}")
+                }
+            }
+        );
     });
 </script>
 
@@ -48,23 +84,33 @@
 <body>
     <h1>VQA By Joana</h1>
 
-    <h2>Videos Posted</h2>
+    <h2>Videos posted</h2>
     <p>Select the video you want to watch!</p>
 
-    <h3>Your Videos</h3>
+    <h3>Your videos</h3>
     <div class="ui fluid vertical menu" id="videos_menu1">
     </div>
-    <br>
 
-    <h3>Other Users' Videos</h3>
+    <h3>Other users' videos</h3>
     <div class="ui fluid vertical menu" id="videos_menu2">
     </div>
-    <br>
 
     <button class="ui button" id="update_videos_button">
         Update videos
     </button>
-    <br>
+
+    <h3>Add a new video</h3>
+    <div class="ui input">
+        <input type="text" placeholder="URL" id="url_input">
+    </div>
+    <div class="ui input">
+        <input type="text" placeholder="Description" id="desc_input">
+    </div>
+    <button class="ui button" id="new_video_button">
+        Add video
+    </button>
+
+    <br><br>
 
     {% if is_admin %}
 

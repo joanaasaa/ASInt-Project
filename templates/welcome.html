@@ -7,21 +7,21 @@
 		$("#dashboard_button").click(
 			function () {
 				console.log("Dashboard button was clicked")
-				window.location.href = "{{ url_for("Dashboard") }}";
+				window.location.href = "{{ url_for('Dashboard') }}";
 			}
 		)
 
 		$("#logout_button").click(
 			function () {
 				console.log("Log out button was clicked")
-				window.location.href = "{{ url_for("LogOut") }}";
+				window.location.href = "{{ url_for('LogOut') }}";
 			}
 		)
 
 		$("#login_button").click(
 			function () {
 				console.log("Log in button was clicked")
-				window.location.href = "{{ url_for("fenix-example.login") }}";
+				window.location.href = "{{ url_for('fenix-example.login') }}";
 			}
 		)
 	});

@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+
+{% block script %}
+
+<meta id="user_data" data-username="{{ username }}">
+<meta id="video_data" data-video_id="{{ video_id }}">
+
+<script>
+    var view_counted = false;
+
+    function addView() {
+        console.log("I      Adding view to user and video");
+
+        var username = $('#user_data').data("username");
+        var video_id = $('#video_data').data("video_id");
+
+        let video_data = { 'id': video_id };
+        $.ajax({
+            url: '/API/' + username + '/stats/',
+            type: 'PUT',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(video_data),
+            success: function (data) {
+                console.log(data)
+                view_counted = true
+            },
+        });
+    };
+
+    $(document).ready(function () {
+        var player = videojs("video_player");
+        player.src({ "type": "video/youtube", "src": "{{ video_url }}" });
+
+        addView()
+
+        $("#dashboard_button").click(function () {
+            window.location.href = "{{ url_for('Dashboard') }}";
+        });
+    });
+</script>
+
+{% endblock %}
+
+{% block body %}
+
+<body>
+    <h1>VQA By Joana</h1>
+
+    <button class="ui button" id="dashboard_button">
+        Back to dashboard
+    </button>
+
+    <h2>{{ video_desc }}</h2>
+    <video id="video_player" controls class="video-js vjs-default-skin" width="640"
+        data-setup='{ "autoplay": false, "preload": "auto", "techOrder": ["youtube", "html5", "flash"], "sources": [{ "type": "video/youtube" }]'>
+    </video>
+</body>
+
+{% endblock %}
