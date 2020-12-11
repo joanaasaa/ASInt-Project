@@ -33,6 +33,13 @@ class User(Base):
     def __repr__(self):
         return f"<User(username='{self.username}', email='{self.email}', name='{self.name}')>"
 
+    def to_dictionary(self):
+        return {
+            "username": self.username,
+            "email": self.email,
+            "name": self.name,
+        }
+
 
 class Admin(Base):
     __tablename__ = 'admins'
@@ -54,6 +61,15 @@ class UserStats(Base):
 
     def __repr__(self):
         return f"<UserStats(username='{self.username}', views='{self.views}', videos='{self.videos}', questions='{self.questions}', answers='{self.answers}')>"
+
+    def to_dictionary(self):
+        return {
+            "username": self.username,
+            "views": self.views,
+            "videos": self.videos,
+            "questions": self.questions,
+            "answers": self.answers,
+        }
 
 
 class Video(Base):
@@ -265,6 +281,13 @@ def GetUserVideos(username=str):
         Video.posted_by == username).all()
     session.close()
     return user_videos
+
+
+def GetUserStats(username=str):
+    user_stats = session.query(UserStats).filter(
+        UserStats.username == username).first()
+    session.close()
+    return user_stats
 
 
 def GetOtherUsersVideos(username=str):

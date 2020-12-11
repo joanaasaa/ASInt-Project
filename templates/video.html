@@ -6,8 +6,6 @@
 <meta id="video_data" data-video_id="{{ video_id }}">
 
 <script>
-    var view_counted = false;
-
     function addView() {
         console.log("I      Adding view to user and video");
 
@@ -23,7 +21,6 @@
             data: JSON.stringify(video_data),
             success: function (data) {
                 console.log(data)
-                view_counted = true
             },
         });
     };
@@ -55,6 +52,9 @@
     <video id="video_player" controls class="video-js vjs-default-skin" width="640"
         data-setup='{ "autoplay": false, "preload": "auto", "techOrder": ["youtube", "html5", "flash"], "sources": [{ "type": "video/youtube" }]'>
     </video>
+
+    <h3>Video questions</h3>
+    <p>Questions...</p>
 </body>
 
 {% endblock %}

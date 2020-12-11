@@ -78,6 +78,32 @@ def AddView(username):
     return {"user_views": user_views, "video_views": video_views}
 
 
+@app.route("/API/<string:username>/stats/", methods=['GET'])
+def GetUserStats(username):
+    user_stats = db.GetUserStats(username)
+
+    if (user_stats == None):
+        log2term('W', f'There were no stats found for user {username}')
+        return None
+    else:
+        return user_stats.to_dictionary()
+
+
+@app.route("/API/users/", methods=['GET'])
+def GetUsers():
+    all_users = db.ListAllUsers()
+
+    if (all_users == None):
+        log2term('W', f'There were no users found')
+        return None
+    else:
+        users = []
+        for user in all_users:
+            user_dict = user.to_dictionary()
+            users.append(user_dict)
+        return {"users": users}
+
+
 @app.route("/")
 def Index():
     return render_template("welcome.html",

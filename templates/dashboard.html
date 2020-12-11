@@ -2,7 +2,12 @@
 
 {% block script %}
 
+<meta id="is_admin" data-admin="{{ is_admin }}">
+
 <script>
+    var is_admin = $('#is_admin').data("admin");
+    var users_names = null
+
     function refreshVideos(username) {
         $.ajax({
             url: '/API/' + username + '/videos/',
@@ -27,7 +32,7 @@
                         append('<a class="item" href="' + v["url"] + '">' + v["desc"] + '</a>');
                 });
             },
-        })
+        });
     }
 
     function addNewVideo(url, desc, username) {
@@ -53,27 +58,67 @@
         })
     }
 
+    function getUsers4Dropdown() {
+        $.ajax({
+            url: '/API/users/',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+
+                $("#user_dropdown_menu").empty();
+                data["users"].forEach(v => {
+                    $("#user_dropdown_menu").
+                        append('<div class="item" data-value="' + v["username"] + '">' + v["name"] + '</div>');
+                });
+
+                $('.ui.dropdown').dropdown();
+            },
+        });
+    }
+
+    function getUserStats(username) {
+        $.ajax({
+            url: '/API/' + username + '/stats/',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+            },
+        });
+    }
+
     $(document).ready(function () {
         refreshVideos('{{ username }}')
 
-        $("#update_videos_button").click(
-            function () {
-                refreshVideos('{{ username }}')
-            }
-        );
+        if (is_admin) {
+            getUsers4Dropdown();
+        }
 
-        $("#new_video_button").click(
-            function () {
-                url = $("#url_input").val()
-                desc = $("#desc_input").val()
-                if (url == "" || desc == "") {
-                    console.log("W      One of the fields is empty. Check which one and try again!")
-                }
-                else {
-                    addNewVideo(url, desc, "{{ username }}")
-                }
+        $("#update_videos_button").click(function () {
+            refreshVideos('{{ username }}')
+        });
+
+        $("#new_video_button").click(function () {
+            url = $("#url_input").val()
+            desc = $("#desc_input").val()
+            if (url == "" || desc == "") {
+                console.log("W      One of the fields is empty. Check which one and try again!")
             }
-        );
+            else {
+                addNewVideo(url, desc, "{{ username }}")
+            }
+        });
+
+        $("#select_user_button").click(function () {
+            if (is_admin) {
+                user_selected = $("#user_dropdown").dropdown('get value');
+                getUserStats(user_selected);
+            }
+            else {
+                console.log("E      Can't see user stats since ")
+            }
+        });
     });
 </script>
 
@@ -114,11 +159,21 @@
 
     {% if is_admin %}
 
-    <p>You are an Admin!</p>
+    <h2>Admin options</h2>
 
-    {% else %}
+    <h3>View user stats</h3>
 
-    <p>You're not an admin... :(</p>
+    <p>Select user: </p>
+    <div class="ui selection dropdown" id="user_dropdown">
+        <input type="hidden" name="user">
+        <i class="dropdown icon"></i>
+        <div class="default text">Select user</div>
+        <div class="scrollhint menu" id="user_dropdown_menu">
+        </div>
+    </div>
+    <button class="ui button" id="select_user_button">
+        Select
+    </button>
 
     {% endif %}
 
