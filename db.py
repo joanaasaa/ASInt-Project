@@ -49,6 +49,11 @@ class Admin(Base):
     def __repr__(self):
         return f"<Admin(username='{self.username}')>"
 
+    def to_dictionary(self):
+        return {
+            "username": self.username,
+        }
+
 
 class UserStats(Base):
     __tablename__ = 'user_stats'

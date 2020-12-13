@@ -91,6 +91,7 @@ def GetUserStats(username):
 
 @app.route("/API/users/", methods=['GET'])
 def GetUsers():
+    # Get entire lis of users (including users who are admins)
     all_users = db.ListAllUsers()
 
     if (all_users == None):
@@ -101,7 +102,27 @@ def GetUsers():
         for user in all_users:
             user_dict = user.to_dictionary()
             users.append(user_dict)
-        return {"users": users}
+
+    # Get list of admins
+    all_admins = db.ListAllAdmins()
+
+    if (all_admins == None):
+        log2term('W', f'There were no admins found')
+        return None
+    else:
+        admins = []
+        for admin in all_admins:
+            admin_dict = admin.to_dictionary()
+            admins.append(admin_dict)
+
+    return {"users": users, "admins": admins}
+
+
+@app.route("/API/new_admin/<string:username>/", methods=['PUT', 'PATCH'])
+def AddAdmin(username):
+    new_admin = db.NewAdmin(username)
+
+    return {"username": new_admin}
 
 
 @app.route("/")

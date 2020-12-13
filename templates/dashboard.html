@@ -6,7 +6,8 @@
 
 <script>
     var is_admin = $('#is_admin').data("admin");
-    var users_data = null
+    var users_data = null;
+    var admins = null;
 
     function refreshVideos(username) {
         $.ajax({
@@ -44,7 +45,7 @@
             contentType: 'application/json',
             data: JSON.stringify(video_data),
             success: function (data) {
-                console.log(data)
+                console.log(data);
                 if (data["video_id"] == null) {
                     console.log("E      Video couldn't be added to the database".red)
                 }
@@ -55,10 +56,10 @@
                     $("#desc_input").val("")
                 }
             },
-        })
+        });
     }
 
-    function getUsers4Dropdown() {
+    function getUsers4Dropdowns() {
         $.ajax({
             url: '/API/users/',
             type: 'GET',
@@ -66,15 +67,39 @@
             success: function (data) {
                 console.log(data);
 
-                $("#user_dropdown_menu").empty();
-                data["users"].forEach(v => {
-                    $("#user_dropdown_menu").
+                // Save user information
+                users_data = data["users"];
+                admins = data["admins"]
+
+                // Populate user stats dropdown
+                $("#stats_dropdown_menu").empty();
+                users_data.forEach(v => {
+                    $("#stats_dropdown_menu").
                         append('<div class="item" data-value="' + v["username"] + '">' + v["name"] + '</div>');
                 });
 
+                // Find out which users are not admins
+                var not_admins = [];
+                users_data.forEach(v => {
+                    var user_username = v["username"];
+                    var idx = admins.findIndex(admin => admin.username === user_username);
+                    if (idx < 0) {
+                        // User isn't admin
+                        not_admins.push(v);
+                    }
+                });
+                console.log(not_admins);
+
+                // Populate the new admin dropdown
+                $("#new_admin_dropdown_menu").empty();
+                not_admins.forEach(v => {
+                    $("#new_admin_dropdown_menu").
+                        append('<div class="item" data-value="' + v["username"] + '">' + v["name"] + '</div>');
+                });
+
+                // Activate dropdowns
                 $('.ui.dropdown').dropdown();
-                users_data = data["users"];
-            },
+            }
         });
     }
 
@@ -118,39 +143,66 @@
             success: function (data) {
                 console.log(data);
                 drawPlot(data);
-            },
+            }
+        });
+    }
+
+    function promote2Admin(username) {
+        $.ajax({
+            url: '/API/new_admin/' + username + '/',
+            type: 'PUT',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+                if (data["username"] != null) {
+                    console.log("I      You've successfully promoted a new user to admin");
+                }
+                else {
+                    console.log("E      Something went wrong when promoting the user to admin");
+                }
+            }
         });
     }
 
     $(document).ready(function () {
-        refreshVideos('{{ username }}')
+        refreshVideos('{{ username }}');
 
         if (is_admin) {
-            getUsers4Dropdown();
+            getUsers4Dropdowns();
         }
 
         $("#update_videos_button").click(function () {
-            refreshVideos('{{ username }}')
+            refreshVideos('{{ username }}');
         });
 
         $("#new_video_button").click(function () {
-            url = $("#url_input").val()
-            desc = $("#desc_input").val()
+            url = $("#url_input").val();
+            desc = $("#desc_input").val();
             if (url == "" || desc == "") {
-                console.log("W      One of the fields is empty. Check which one and try again!")
+                console.log("W      At least one of the fields is empty. Check which one and try again!");
             }
             else {
-                addNewVideo(url, desc, "{{ username }}")
+                addNewVideo(url, desc, "{{ username }}");
             }
         });
 
-        $("#select_user_button").click(function () {
+        $("#stats_button").click(function () {
             if (is_admin) {
-                user_selected = $("#user_dropdown").dropdown('get value');
+                user_selected = $("#stats_dropdown").dropdown('get value');
                 getUserStats(user_selected);
             }
             else {
-                console.log("E      Can't see user stats since ")
+                console.log("E      Can't see user stats since you're not an admin");
+            }
+        });
+
+        $("#new_admin_button").click(function () {
+            if (is_admin) {
+                user_selected = $("#new_admin_dropdown").dropdown('get value');
+                promote2Admin(user_selected);
+            }
+            else {
+                console.log("E      Can't promote another user to admin since you're not an admin");
             }
         });
     });
@@ -167,10 +219,12 @@
     <p>Select the video you want to watch!</p>
 
     <h3>Your videos</h3>
+    <p>These are all the videos you've posted.</p>
     <div class="ui fluid vertical menu" id="videos_menu1">
     </div>
 
     <h3>Other users' videos</h3>
+    <p>These are all the videos other users have posted.</p>
     <div class="ui fluid vertical menu" id="videos_menu2">
     </div>
 
@@ -179,8 +233,12 @@
     </button>
 
     <h3>Add a new video</h3>
+    <p>To add a new video to the app, find it's YouTube URL and a short
+        description of the video (the video's title, for example) and paste
+        them below. Finally click "Add video" to add it to the database.
+    </p>
     <div class="ui input">
-        <input type="text" placeholder="URL" id="url_input">
+        <input type="text" placeholder="YouTube URL" id="url_input">
     </div>
     <div class="ui input">
         <input type="text" placeholder="Description" id="desc_input">
@@ -196,20 +254,35 @@
     <h2>Admin options</h2>
 
     <h3>View user stats</h3>
-
-    <p>Select user: </p>
-    <div class="ui selection dropdown" id="user_dropdown">
+    <p>As an admin you have an overview of other users' activity on the app.
+        Select below which user's activity you want to view.
+    </p>
+    <div class="ui selection dropdown" id="stats_dropdown">
         <input type="hidden" name="user">
         <i class="dropdown icon"></i>
         <div class="default text">Select user</div>
-        <div class="scrollhint menu" id="user_dropdown_menu">
+        <div class="scrollhint menu" id="stats_dropdown_menu">
         </div>
     </div>
-    <button class="ui button" id="select_user_button">
+    <button class="ui button" id="stats_button">
         Select
     </button>
-
     <div id="user_stats_plot"></div>
+
+    <h3>Promote to admin</h3>
+    <p>As an admin you can promote other users to become admins too.
+        Select below who you want to promote as an admin!
+    </p>
+    <div class="ui selection dropdown" id="new_admin_dropdown">
+        <input type="hidden" name="user">
+        <i class="dropdown icon"></i>
+        <div class="default text">Select user</div>
+        <div class="scrollhint menu" id="new_admin_dropdown_menu">
+        </div>
+    </div>
+    <button class="ui button" id="new_admin_button">
+        Select
+    </button>
 
     {% endif %}
 
