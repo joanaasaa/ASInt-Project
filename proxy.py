@@ -4,8 +4,8 @@ Proxy Module
 ============
 
 The proxy module is the core of the VQA By Joana app. 
-It establishes the bridge between front-end HTML templates 
-and back-end computing and data wharehousing.
+It establishes the bridge between front-end and back-end 
+of the application.
 """
 
 import os
