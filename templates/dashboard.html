@@ -166,10 +166,13 @@
 
     $(document).ready(function () {
         refreshVideos('{{ username }}');
-
         if (is_admin) {
             getUsers4Dropdowns();
         }
+
+        $("#welcome_button").click(function () {
+            window.location.href = "{{ url_for('Index') }}";
+        });
 
         $("#update_videos_button").click(function () {
             refreshVideos('{{ username }}');
@@ -214,6 +217,10 @@
 
 <body>
     <h1>VQA By Joana</h1>
+
+    <button class="ui button" id="welcome_button">
+        Back to welcome page
+    </button>
 
     <h2>Videos posted</h2>
     <p>Select the video you want to watch!</p>
