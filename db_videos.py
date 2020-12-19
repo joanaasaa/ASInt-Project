@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 from os import path
+from datetime import datetime
 
 from sqlalchemy import create_engine
 from sqlalchemy import ForeignKey
@@ -9,13 +9,13 @@ from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy import Time
 from sqlalchemy import Boolean
+from sqlalchemy import DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from aux.logs import log2term
-import db_users
 
 DB_FILE = "VQAdb_videos.sqlite"
 
@@ -40,9 +40,10 @@ class Video(Base):
     desc = Column(String)
     posted_by = Column(String, nullable=False)
     views = Column(Integer, default=0, nullable=False)
+    date = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):
-        return f"<Video(id='{self.id}', url='{self.url}', desc='{self.desc}', posted_by='{self.posted_by}', views='{self.views}')>"
+        return f"<Video(id='{self.id}', url='{self.url}', desc='{self.desc}', posted_by='{self.posted_by}', views='{self.views}', date='{self.date}')>"
 
     def to_dictionary(self):
         return {
@@ -51,6 +52,7 @@ class Video(Base):
             "desc": self.desc,
             "posted_by": self.posted_by,
             "views": self.views,
+            "date": self.date,
         }
 
 
@@ -72,8 +74,6 @@ def NewVideo(url=str, desc=str, posted_by=str):
         session.commit()
         session.close()
         log2term('I', f'New video with ID {new_video.id}')
-        # Iterate counter for nr of videos posted by the user
-        db_users.Add2VideosPosted(posted_by)
         return new_video.id
     except Exception as e:
         session.rollback()
@@ -89,13 +89,6 @@ def GetVideo(id=int):
     video = session.query(Video).filter(Video.id == id).first()
     session.close()
     return video
-
-
-def VideoExists(username=str):
-    if (GetVideo(username) == None):
-        return False
-
-    return True
 
 
 def GetUserVideos(username=str):

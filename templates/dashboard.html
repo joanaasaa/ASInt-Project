@@ -10,8 +10,10 @@
     var admins = null;
 
     function refreshVideos(username) {
+        console.log("D      Refreshing videos posted");
+
         $.ajax({
-            url: '/API/' + username + '/videos/',
+            url: 'http://127.0.0.1:5000/API/' + username + '/videos/',
             type: 'GET',
             dataType: 'json',
             success: function (data) {
@@ -37,9 +39,11 @@
     }
 
     function addNewVideo(url, desc, username) {
+        console.log("D      Adding video to database");
+
         let video_data = { 'url': url, 'desc': desc }
         $.ajax({
-            url: '/API/' + username + '/videos/',
+            url: 'http://127.0.0.1:5000/API/' + username + '/videos/',
             type: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -60,8 +64,10 @@
     }
 
     function getUsers4Dropdowns() {
+        console.log("D      Getting users and admins for dropdowns");
+
         $.ajax({
-            url: '/API/users/',
+            url: 'http://127.0.0.1:5000/API/users/',
             type: 'GET',
             dataType: 'json',
             success: function (data) {
@@ -69,7 +75,7 @@
 
                 // Save user information
                 users_data = data["users"];
-                admins = data["admins"]
+                admins = data["admins"];
 
                 // Populate user stats dropdown
                 $("#stats_dropdown_menu").empty();
@@ -136,8 +142,10 @@
     }
 
     function getUserStats(username) {
+        console.log("D      Getting stats for user " + username);
+
         $.ajax({
-            url: '/API/' + username + '/stats/',
+            url: 'http://127.0.0.1:5000/API/' + username + '/stats/',
             type: 'GET',
             dataType: 'json',
             success: function (data) {
@@ -148,8 +156,10 @@
     }
 
     function promote2Admin(username) {
+        console.log("D      Promoting user " + username + " to admin");
+
         $.ajax({
-            url: '/API/new_admin/' + username + '/',
+            url: 'http://127.0.0.1:5000/API/new_admin/' + username + '/',
             type: 'PUT',
             dataType: 'json',
             success: function (data) {

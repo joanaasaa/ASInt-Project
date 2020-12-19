@@ -115,13 +115,6 @@ def GetUserStats(username=str):
     return user_stats
 
 
-def UserExists(username=str):
-    if (GetUser(username) == None):
-        return False
-
-    return True
-
-
 def NewUser(username=str, email=str, name=str):
     new_user = User(username=username, email=email, name=name)
     new_stats = UserStats(username=username)

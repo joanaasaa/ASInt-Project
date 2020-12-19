@@ -6,21 +6,58 @@
 <meta id="video_data" data-video_id="{{ video_id }}">
 
 <script>
+    var username = $('#user_data').data("username");
+    var video_id = $('#video_data').data("video_id");
+
     function addView() {
-        console.log("I      Adding view to user and video");
+        console.log("D      Adding view to user and video");
 
-        var username = $('#user_data').data("username");
-        var video_id = $('#video_data').data("video_id");
-
-        let video_data = { 'id': video_id };
         $.ajax({
-            url: '/API/' + username + '/stats/',
+            url: 'http://127.0.0.1:5000/API/stats/views/' + username + '/' + video_id + '/',
             type: 'PUT',
             dataType: 'json',
-            contentType: 'application/json',
-            data: JSON.stringify(video_data),
             success: function (data) {
-                console.log(data)
+                console.log(data);
+            },
+        });
+    };
+
+    function refreshQuestionsAndAnswers() {
+        var q_counter = 0;
+        var a_counter = 0;
+
+        console.log("D      Refreshing questions and answers for this video");
+
+        $.ajax({
+            url: 'http://127.0.0.1:5000/API/' + video_id + '/questions/answers/',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+
+                // Clearing questions and answers
+                $('#questions_answers').empty();
+                // Adding questions and answers to page
+                data["video_questions"].forEach(q => {
+                    q_counter += 1;
+
+                    // Start table
+                    $('#questions_answers').append('<table class="ui celled table" id="question' + q_counter + '">');
+
+                    // Print question
+                    $('#question' + q_counter).
+                        append('<thead><tr><th>' + q["question"] + '</th></tr></thead>');
+
+                    // Print answers
+                    $('#question' + q_counter).append('<tbody>');
+                    q["answers"].forEach(a => {
+                        $('#question' + q_counter).append('<tr><td>' + a["answer"] + '</td></tr>');
+                    });
+                    $('#question' + q_counter).append('</tbody>');
+
+                    // End table
+                    $('#questions_answers').append('</table>');
+                });
             },
         });
     };
@@ -28,8 +65,9 @@
     $(document).ready(function () {
         var player = videojs("video_player");
         player.src({ "type": "video/youtube", "src": "{{ video_url }}" });
+        addView();
 
-        addView()
+        refreshQuestionsAndAnswers();
 
         $("#dashboard_button").click(function () {
             window.location.href = "{{ url_for('Dashboard') }}";
@@ -53,8 +91,8 @@
         data-setup='{ "autoplay": false, "preload": "auto", "techOrder": ["youtube", "html5", "flash"], "sources": [{ "type": "video/youtube" }]'>
     </video>
 
-    <h3>Video questions</h3>
-    <p>Questions...</p>
+    <h3>Questions about the video</h3>
+    <div id="questions_answers"></div>
 </body>
 
 {% endblock %}
