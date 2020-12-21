@@ -20,6 +20,15 @@ app = Flask(__name__)
 ########################################################
 #                 FLASK API ENDPOINTS                  #
 ########################################################
+@app.route("/API/questions/<int:question_id>/", methods=['GET'])
+def GetQuestion(question_id):
+    question = db.GetQuestion(question_id)
+    if (question == None):
+        return None
+    else:
+        return question.to_dictionary()
+
+
 @app.route("/API/<int:video_id>/questions/answers/", methods=['GET'])
 def GetVideoQuestionsAndAnswers(video_id):
     # Fetch videos according to username
@@ -54,14 +63,25 @@ def GetVideoQuestionsAndAnswers(video_id):
     return {"video_questions": video_questions}
 
 
-@app.route("/API/<int:video_id>/new_question/", methods=['POST'])
-def NewQuestion():
-    return
+@app.route("/API/videos/<int:video_id>/new_question/", methods=['POST'])
+def NewQuestion(video_id):
+    question_data = request.get_json()
+    username = question_data["username"]
+    question = question_data["question"]
+    instant = question_data["instant"]
+
+    new_question = db.NewQuestion(question, instant, username, video_id)
+    return {"question_id": new_question}
 
 
-@app.route("/API/<int:question_id>/new_answer/", methods=['POST'])
-def NewAnswer():
-    return
+@app.route("/API/questions/<int:question_id>/new_answer/", methods=['POST'])
+def NewAnswer(question_id):
+    answer_data = request.get_json()
+    username = answer_data["username"]
+    answer = answer_data["answer"]
+
+    new_answer = db.NewAnswer(answer, question_id, username)
+    return {"answer_id": new_answer}
 
 
 ########################################################

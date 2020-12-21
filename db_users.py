@@ -187,6 +187,30 @@ def AddView2User(username=str):
     return user_stats.views
 
 
+def Add2Questions(username=str):
+    # Iterate the user's question
+    user_stats = session.query(UserStats).filter(
+        UserStats.username == username).first()
+    user_stats.questions += 1
+
+    # Save iterations to DB
+    session.commit()
+    session.close()
+    return user_stats.questions
+
+
+def Add2Answers(username=str):
+    # Iterate the user's question
+    user_stats = session.query(UserStats).filter(
+        UserStats.username == username).first()
+    user_stats.answers += 1
+
+    # Save iterations to DB
+    session.commit()
+    session.close()
+    return user_stats.answers
+
+
 ########################################################
 #                        MAIN                          #
 ########################################################

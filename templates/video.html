@@ -2,12 +2,14 @@
 
 {% block script %}
 
+<meta id="video_url" data-video_url="{{ video_url }}">
 <meta id="user_data" data-username="{{ username }}">
-<meta id="video_data" data-video_id="{{ video_id }}">
+<meta id="video_id" data-video_id="{{ video_id }}">
 
 <script>
+    var video_url = $('#video_url').data("video_url");
     var username = $('#user_data').data("username");
-    var video_id = $('#video_data').data("video_id");
+    var video_id = $('#video_id').data("video_id");
 
     function addView() {
         console.log("D      Adding view to user and video");
@@ -37,34 +39,83 @@
 
                 // Clearing questions and answers
                 $('#questions_answers').empty();
+                $('#questions_dropdown_menu').empty();
                 // Adding questions and answers to page
                 data["video_questions"].forEach(q => {
                     q_counter += 1;
-
-                    // Start table
-                    $('#questions_answers').append('<table class="ui celled table" id="question' + q_counter + '">');
+                    // Add question to questions dropdown menu
+                    $("#questions_dropdown_menu").append('<div class="item" data-value="' + q["id"] + '">' + q["question"] + '</div>');
 
                     // Print question
-                    $('#question' + q_counter).
-                        append('<thead><tr><th>' + q["question"] + '</th></tr></thead>');
+                    $('#questions_answers').append('<div class="ui fluid card"><div class="content"><div class="header">' + q["question"] + '</div><div class="meta"><a>' + q["user_name"] + '</a><span class="date">' + q["date"] + '</span></div></div></div></div>');
+
+                    // Start section answers
+                    $('#questions_answers').append('<div class="ui comments" id="question' + q_counter + '" style="margin-left: 50px;">');
 
                     // Print answers
-                    $('#question' + q_counter).append('<tbody>');
-                    q["answers"].forEach(a => {
-                        $('#question' + q_counter).append('<tr><td>' + a["answer"] + '</td></tr>');
-                    });
-                    $('#question' + q_counter).append('</tbody>');
+                    $('#question' + q_counter).
+                        append('<h4 class="ui dividing header">Answers</h4>');
 
-                    // End table
-                    $('#questions_answers').append('</table>');
+                    q["answers"].forEach(a => {
+                        a_counter += 1;
+                        $('#question' + q_counter).append('<div class="comment"><div class="content"><a class="author">' + a["user_name"] + '</a><div class="metadata"><span class="date">' + a["date"] + '</span></div><div class="text">' + a["answer"] + '</div></div></div>');
+                    });
+                    if (a_counter == 0) {
+                        $('#question' + q_counter).append('<div class="text">There are still no answers to this question. Be the first to answer!</div>');
+                    }
+
+                    // End question section
+                    $('#questions_answers').append('</div>');
+                    a_counter = 0;
                 });
             },
         });
     };
 
+    function addNewQuestion(question, instant) {
+        console.log("D      Adding question to database");
+
+        let question_data = { 'question': question, 'instant': instant, 'username': username }
+        $.ajax({
+            url: 'http://127.0.0.1:5000//API/videos/' + video_id + '/new_question/',
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(question_data),
+            success: function (data) {
+                console.log(data);
+                // Update questions and answers to add new answer
+                refreshQuestionsAndAnswers();
+                // Clear new question textarea
+                $("#new_question_text").val("");
+            },
+        });
+    }
+
+    function addNewAnswer(question_id, answer) {
+        console.log("D      Adding answer to database");
+
+        let answer_data = { 'answer': answer, 'username': username }
+        $.ajax({
+            url: 'http://127.0.0.1:5000//API/questions/' + question_id + '/new_answer/',
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(answer_data),
+            success: function (data) {
+                console.log(data);
+                // Update questions and answers to add new answer
+                refreshQuestionsAndAnswers();
+                // Clear new answer fields
+                $("#new_answer_text").val("")
+                $("#questions_dropdown").dropdown('clear');
+            },
+        });
+    }
+
     $(document).ready(function () {
         var player = videojs("video_player");
-        player.src({ "type": "video/youtube", "src": "{{ video_url }}" });
+        player.src({ "type": "video/youtube", "src": video_url });
         addView();
 
         refreshQuestionsAndAnswers();
@@ -72,6 +123,40 @@
         $("#dashboard_button").click(function () {
             window.location.href = "{{ url_for('Dashboard') }}";
         });
+
+        $("#update_QAs_button").click(function () {
+            refreshQuestionsAndAnswers();
+        });
+
+        $("#new_question_button").click(function () {
+            if (player.paused() == true && player.hasStarted() == true) {
+                let instant = player.currentTime();
+                let question = $("#new_question_text").val();
+                if (question == "") {
+                    console.log("W      Nothing was written in the question text area");
+                }
+                else {
+                    addNewQuestion(question, instant);
+                }
+            }
+            else {
+                console.log("W      The video has to have started and be paused to add a new question");
+            }
+        });
+
+        $("#new_answer_button").click(function () {
+            question_id = $("#questions_dropdown").dropdown('get value');
+            answer = $("#new_answer_text").val();
+            if (question_id == "" || answer == "") {
+                console.log("W      At least one of the fields is empty. Check which one and try again!");
+            }
+            else {
+                addNewAnswer(question_id, answer);
+            }
+        });
+
+        // Activate dropdowns
+        $('.ui.dropdown').dropdown();
     });
 </script>
 
@@ -90,9 +175,56 @@
     <video id="video_player" controls class="video-js vjs-default-skin" width="640"
         data-setup='{ "autoplay": false, "preload": "auto", "techOrder": ["youtube", "html5", "flash"], "sources": [{ "type": "video/youtube" }]'>
     </video>
+    <div class="ui horizontal divided list">
+        <div class="item">
+            <div class="content">
+                <div class="header">Posted by</div>
+                <div class="text">{{ video_posted_by_name }} ({{ video_posted_by }})</div>
+            </div>
+        </div>
+        <div class="item">
+            <div class="content">
+                <div class="header">Views</div>
+                <div class="text">{{ video_views }}</div>
+            </div>
+        </div>
+    </div>
+    <br>
 
     <h3>Questions about the video</h3>
+    <p>This is everything people have to say about the video. Join the conversation!</p>
     <div id="questions_answers"></div>
+    <br>
+    <div class="ui button" id="update_QAs_button">Update Q&As</div>
+    <br>
+
+    <h4>Make a question</h4>
+    <form class="ui reply form">
+        <div class="field">
+            <textarea id="new_question_text"></textarea>
+        </div>
+        <div class="ui button" id="new_question_button">Submit question</div>
+    </form>
+    <br>
+
+    <h4>Answer a question</h4>
+    <p>Select the question you wish to answer:</p>
+    <div class="ui selection dropdown" id="questions_dropdown">
+        <input type="hidden" name="question">
+        <i class="dropdown icon"></i>
+        <div class="default text">Select question</div>
+        <div class="scrollhint menu" id="questions_dropdown_menu"></div>
+    </div>
+    <br>
+    <br>
+    <p>Write your answer:</p>
+    <form class="ui reply form">
+        <div class="field">
+            <textarea id="new_answer_text"></textarea>
+        </div>
+        <div class="ui button" id="new_answer_button">Submit answer</div>
+    </form>
+    <br>
 </body>
 
 {% endblock %}

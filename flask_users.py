@@ -76,7 +76,7 @@ def GetUserStats(username):
         return user_stats.to_dictionary()
 
 
-@app.route("/API/new_admin/<string:username>/", methods=['PUT', 'PATCH'])
+@app.route("/API/new_admin/<string:username>/", methods=['POST'])
 def NewAdmin(username):
     new_admin = db.NewAdmin(username)
     return {"username": new_admin}
@@ -96,6 +96,18 @@ def NewUser(username):
 def AddView(username):
     user_views = db.AddView2User(username)
     return {"user_views": user_views}
+
+
+@app.route("/API/<string:username>/stats/questions/", methods=['PUT', 'PATCH'])
+def AddQuestion(username):
+    user_questions = db.Add2Questions(username)
+    return {"user_questions": user_questions}
+
+
+@app.route("/API/<string:username>/stats/answers/", methods=['PUT', 'PATCH'])
+def AddAnswer(username):
+    user_answers = db.Add2Answers(username)
+    return {"user_answers": user_answers}
 
 
 ########################################################

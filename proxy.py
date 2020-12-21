@@ -83,13 +83,21 @@ def VideoExists(video_id) -> bool:
     return True
 
 
+def QuestionExists(question_id) -> bool:
+    response = requests.get(f"http://127.0.0.1:8000/API/videos/{question_id}/")
+    if response == None:
+        log2term('W', f"There's no question with ID {question_id}")
+        return False
+    return True
+
+
 def NewUser(username, email, name):
     if UserExists(username) == True:
         log2term(
             'E',
             f"Can't add user {username} to users databse since it already exists"
         )
-        return False
+        return None
 
     user_data = {"email": email, "name": name}
     user_data = json.dumps(user_data)
@@ -196,7 +204,8 @@ def NewAdmin(username):
         )
         return None
 
-    response = requests.put(f"http://127.0.0.1:6000/API/new_admin/{username}/")
+    response = requests.post(
+        f"http://127.0.0.1:6000/API/new_admin/{username}/")
     return response.json()
 
 
@@ -223,11 +232,69 @@ def GetVideoQuestionsAndAnswers(video_id):
         for answer in answers:
             # Find the author of the answer
             response = requests.get(
-                f"http://127.0.0.1:6000/API/users/{username}/")
+                f"http://127.0.0.1:6000/API/users/{answer['username']}/")
             user = response.json()
             answer["user_name"] = user["name"]
 
     return {"video_questions": questions}
+
+
+@app.route("/API/videos/<int:video_id>/new_question/", methods=['POST'])
+def NewQuestion(video_id):
+    question_data = request.get_json()
+    username = question_data["username"]
+
+    if VideoExists(video_id) == False:
+        log2term(
+            'E',
+            f"Can't create a question about video {video_id} since the video doesn't exist in the database"
+        )
+        return None
+
+    if UserExists(username) == False:
+        log2term(
+            'E',
+            f"Can't create the question submitted by user {username} since this user doesn't exist in the database"
+        )
+        return None
+
+    response = requests.post(
+        f"http://127.0.0.1:8000//API/videos/{video_id}/new_question/",
+        json=question_data)
+
+    if response != None:
+        requests.put(f"http://127.0.0.1:6000/API/{username}/stats/questions/")
+
+    return response.json()
+
+
+@app.route("/API/questions/<int:question_id>/new_answer/", methods=['POST'])
+def NewAnswer(question_id):
+    answer_data = request.get_json()
+    username = answer_data["username"]
+
+    if QuestionExists(question_id) == False:
+        log2term(
+            'E',
+            f"Can't create an answer to question {question_id} since it doesn't exist in the database"
+        )
+        return None
+
+    if UserExists(username) == False:
+        log2term(
+            'E',
+            f"Can't create an answer submitted by user {username} since this user doesn't exist in the database"
+        )
+        return None
+
+    response = requests.post(
+        f"http://127.0.0.1:8000//API/questions/{question_id}/new_answer/",
+        json=answer_data)
+
+    if response != None:
+        requests.put(f"http://127.0.0.1:6000/API/{username}/stats/answers/")
+
+    return response.json()
 
 
 ########################################################
@@ -308,11 +375,18 @@ def Video(video_id):
         # Get video information needed for the html template
         video_info = GetVideo(video_id)
 
+        # Find the author's name through its username
+        response = requests.get(
+            f'http://127.0.0.1:6000/API/users/{video_info["posted_by"]}/')
+        user = response.json()
+        user_name = user["name"]
+
         return render_template("video.html",
                                video_id=video_id,
                                video_url=video_info["url"],
                                video_desc=video_info["desc"],
                                video_posted_by=video_info["posted_by"],
+                               video_posted_by_name=user_name,
                                video_views=video_info["views"],
                                username=username)
 

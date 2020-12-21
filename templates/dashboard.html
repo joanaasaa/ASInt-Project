@@ -102,9 +102,6 @@
                     $("#new_admin_dropdown_menu").
                         append('<div class="item" data-value="' + v["username"] + '">' + v["name"] + '</div>');
                 });
-
-                // Activate dropdowns
-                $('.ui.dropdown').dropdown();
             }
         });
     }
@@ -202,7 +199,12 @@
         $("#stats_button").click(function () {
             if (is_admin) {
                 user_selected = $("#stats_dropdown").dropdown('get value');
-                getUserStats(user_selected);
+                if (user_selected == "") {
+                    console.log("W      No user selected in dropdown menu");
+                }
+                else {
+                    getUserStats(user_selected);
+                }
             }
             else {
                 console.log("E      Can't see user stats since you're not an admin");
@@ -211,13 +213,22 @@
 
         $("#new_admin_button").click(function () {
             if (is_admin) {
-                user_selected = $("#new_admin_dropdown").dropdown('get value');
-                promote2Admin(user_selected);
+                var user_selected = $("#new_admin_dropdown").dropdown('get value');
+                if (user_selected == "") {
+                    console.log("W      No user selected in dropdown menu")
+                }
+                else {
+                    promote2Admin(user_selected);
+
+                }
             }
             else {
                 console.log("E      Can't promote another user to admin since you're not an admin");
             }
         });
+
+        // Activate dropdowns
+        $('.ui.dropdown').dropdown();
     });
 </script>
 
@@ -294,8 +305,7 @@
         <input type="hidden" name="user">
         <i class="dropdown icon"></i>
         <div class="default text">Select user</div>
-        <div class="scrollhint menu" id="new_admin_dropdown_menu">
-        </div>
+        <div class="scrollhint menu" id="new_admin_dropdown_menu"></div>
     </div>
     <button class="ui button" id="new_admin_button">
         Select

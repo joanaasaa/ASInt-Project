@@ -98,6 +98,13 @@ session = scoped_session(Session)
 ########################################################
 #                      FUNCTIONS                       #
 ########################################################
+def GetQuestion(question_id=int):
+    question = session.query(Question).filter(
+        Question.id == question_id).first()
+    session.close()
+    return question
+
+
 def NewQuestion(question=str, instant=int, username=str, video_id=int):
     new_question = Question(question=question,
                             instant=instant,

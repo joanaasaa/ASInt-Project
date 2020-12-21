@@ -32,10 +32,14 @@ video_id = db_videos.NewVideo(
 db_users.Add2VideosPosted('ist426524')
 new_question_id = db_QAs.NewQuestion('When does the PS5 come out?', '2',
                                      'ist186412', video_id)
+db_users.Add2Questions('ist186412')
 db_QAs.NewAnswer("I think it's next month", new_question_id, 'ist426524')
+db_users.Add2Answers('ist426524')
 db_QAs.NewAnswer("No, it already came out!", new_question_id, 'ist187612')
+db_users.Add2Answers('ist187612')
 db_QAs.NewQuestion("Marques' editting is so good! Who agrees with me?", '27',
                    'ist426524', '1')
+db_users.Add2Questions('ist426524')
 
 db_videos.NewVideo(
     'https://www.youtube.com/watch?v=RkC0l4iekYo&ab_channel=PlayStationPlayStationVerified',
