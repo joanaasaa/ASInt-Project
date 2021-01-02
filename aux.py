@@ -1,7 +1,39 @@
 #!/usr/bin/env python3
 
+from enum import Enum
 from termcolor import colored
 from termcolor import cprint
+
+
+class ServerConfig:
+    def __init__(self, addr=str, port=int):
+        self.addr = addr
+        self.port = port
+
+    def set(self, addr=str, port=int):
+        self.addr = addr
+        self.port = port
+
+
+class EventType(Enum):
+    GET_USER = 1
+    GET_ADMIN = 2
+    GET_USERS_ADMINS = 3
+    GET_USERSTATS = 4
+    GET_VIDEO = 5
+    GET_QAS = 6
+    GET_ALL_LOGS = 7
+    PUT_VIEW = 8
+    PUT_VIDEO_VIEW = 9
+    PUT_USERSTATS_VIDEO = 10
+    PUT_USERSTATS_VIEW = 12
+    PUT_USERSTATS_QUESTION = 12
+    PUT_USERSTSTS_ANSWER = 13
+    POST_NEW_USER = 14
+    POST_NEW_ADMIN = 15
+    POST_NEW_VIDEO = 16
+    POST_NEW_QUESTION = 17
+    POST_NEW_ANSWER = 18
 
 
 def log2term(type: str, msg: str):

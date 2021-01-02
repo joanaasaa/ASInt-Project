@@ -2,7 +2,7 @@
 import os
 import sys
 
-from aux.logs import log2term
+from aux import log2term
 
 if os.path.exists("VQAdb_users.sqlite"):
     os.remove("VQAdb_users.sqlite")
@@ -13,9 +13,13 @@ if os.path.exists("VQAdb_videos.sqlite"):
 if os.path.exists("VQAdb_QAs.sqlite"):
     os.remove("VQAdb_QAs.sqlite")
 
+if os.path.exists("VQAdb_logs.sqlite"):
+    os.remove("VQAdb_logs.sqlite")
+
 import db_users
 import db_videos
 import db_QAs
+import db_logs
 
 db_users.NewUser('ist426524', 'joana.sa@tecnico.ulisboa.pt', 'Joana Sá')
 db_users.NewAdmin('ist426524')

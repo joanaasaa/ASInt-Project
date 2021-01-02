@@ -21,6 +21,7 @@ the proxy to access the databases.
 import os
 import requests
 import json
+import yaml
 
 from flask import Flask
 from flask import redirect
@@ -32,9 +33,20 @@ from flask import request
 from flask_dance.consumer import OAuth2ConsumerBlueprint
 from oauthlib.oauth2.rfc6749.errors import TokenExpiredError
 
-from aux.logs import log2term
+from aux import ServerConfig
+from aux import EventType
+from aux import log2term
 
 app = Flask(__name__)
+
+########################################################
+#                  SERVERS' CONFIGS                    #
+########################################################
+me = ServerConfig('', 0)
+flask_users = ServerConfig('', 0)
+flask_videos = ServerConfig('', 0)
+flask_QAs = ServerConfig('', 0)
+flask_logs = ServerConfig('', 0)
 
 ########################################################
 #                        OAUTH                         #
@@ -59,35 +71,94 @@ app.register_blueprint(fenix_blueprint)
 ########################################################
 #                      FUNCTIONS                       #
 ########################################################
+def readYAML(filename=str):
+    try:
+        stream = open("config.yaml", 'r')
+        config = yaml.safe_load(stream)
+    except yaml.YAMLError as e:
+        log2term('E', f'While opening config file: {e}')
+        exit
+
+    proxy_dict = config["proxy"]
+    flask_users_dict = config["flask_users"]
+    flask_videos_dict = config["flask_videos"]
+    flask_QAs_dict = config["flask_QAs"]
+    flask_logs_dict = config["flask_logs"]
+
+    me.set(proxy_dict["address"], proxy_dict["port"])
+    flask_users.set(flask_users_dict["address"], flask_users_dict["port"])
+    flask_videos.set(flask_videos_dict["address"], flask_videos_dict["port"])
+    flask_QAs.set(flask_QAs_dict["address"], flask_QAs_dict["port"])
+    flask_logs.set(flask_logs_dict["address"], flask_logs_dict["port"])
+
+
 def UserExists(username) -> bool:
-    response = requests.get(f"http://127.0.0.1:6000/API/users/{username}/")
-    if response == None:
+    response = requests.get(
+        f"http://{flask_users.addr}:{flask_users.port}/API/users/{username}/")
+    if response.json() == {}:
         log2term('W', f"There's no user with username {username}")
         return False
+
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_USER.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    log2term('D', f"User {username} exists in the database")
     return True
 
 
 def AdminExists(username) -> bool:
-    response = requests.get(f"http://127.0.0.1:6000/API/admins/{username}/")
-    if response == None:
-        log2term('W', f"There's no user with username {username}")
+    response = requests.get(
+        f"http://{flask_users.addr}:{flask_users.port}/API/admins/{username}/")
+    if response.json() == {}:
+        log2term('W', f"User with username {username} is not an admin")
         return False
+
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_ADMIN.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    log2term('D', f"User {username} is an admin")
     return True
 
 
 def VideoExists(video_id) -> bool:
-    response = requests.get(f"http://127.0.0.1:7000/API/videos/{video_id}/")
-    if response == None:
+    response = requests.get(
+        f"http://{flask_videos.addr}:{flask_videos.port}/API/videos/{video_id}/"
+    )
+    if response.json() == {}:
         log2term('W', f"There's no video with ID {video_id}")
         return False
+
+    # Log the request to the videos flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_VIDEO.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_videos.addr}",\n"dest_port": "{flask_videos.port}",\n"content": "{video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    log2term('D', f"Video with ID {video_id} exists in the database")
     return True
 
 
 def QuestionExists(question_id) -> bool:
-    response = requests.get(f"http://127.0.0.1:8000/API/videos/{question_id}/")
-    if response == None:
+    response = requests.get(
+        f"http://{flask_QAs.addr}:{flask_QAs.port}/API/questions/{question_id}/"
+    )
+    if response.json() == {}:
         log2term('W', f"There's no question with ID {question_id}")
         return False
+
+    # Log the request to the QAs flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_QUESTION.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "{question_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    log2term('D', f"Question with ID {question_id} exists in the database")
     return True
 
 
@@ -97,13 +168,27 @@ def NewUser(username, email, name):
             'E',
             f"Can't add user {username} to users databse since it already exists"
         )
-        return None
+        return {}
 
-    user_data = {"email": email, "name": name}
-    user_data = json.dumps(user_data)
+    url = f"http://{flask_users.addr}:{flask_users.port}/API/new_user/{username}/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"name": "{name}",\n"email": "{email}"\n}}'
+    response = requests.post(url, headers=headers, data=body)
 
-    response = requests.put(f"http://127.0.0.1:6000/API/new_user/{username}/",
-                            json=user_data)
+    if response.json() == {}:
+        log2term('E', f"Failed to add user {username} to the database")
+        return {}
+
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_USER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    log2term(
+        'D',
+        f"New user with username {username} was successfully added to the database"
+    )
     return response.json()
 
 
@@ -112,50 +197,178 @@ def NewUser(username, email, name):
 ########################################################
 @app.route("/API/videos/<int:video_id>/", methods=['GET'])
 def GetVideo(video_id):
-    if VideoExists(video_id) == False:
-        return None
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_VIDEO.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "{video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
 
-    response = requests.get(f"http://127.0.0.1:7000/API/videos/{video_id}/")
+    if VideoExists(video_id) == False:
+        return {}
+
+    response = requests.get(
+        f"http://{flask_videos.addr}:{flask_videos.port}/API/videos/{video_id}/"
+    )
+
+    # Log the request to the videos flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_VIDEO.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_videos.addr}",\n"dest_port": "{flask_videos.port}",\n"content": "{video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     return response.json()
 
 
 @app.route("/API/<string:username>/videos/", methods=['GET'])
 def GetVideos(username):
-    if UserExists(username) == False:
-        return None
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_VIDEO.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "all"\n}}'
+    requests.post(url, headers=headers, data=body)
 
-    response = requests.get(f"http://127.0.0.1:7000/API/{username}/videos/")
+    if UserExists(username) == False:
+        return {}
+
+    response = requests.get(
+        f"http://{flask_videos.addr}:{flask_videos.port}/API/{username}/videos/"
+    )
+    # Log the request to the flask videos server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_VIDEO.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_videos.addr}",\n"dest_port": "{flask_videos.port}",\n"content": "all"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    return response.json()
+
+
+@app.route("/API/new_admin/<string:username>/", methods=['POST'])
+def NewAdmin(username):
+    data = request.get_json()
+    author = data["author"]  # Post request's author
+
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_ADMIN.value}",\n"username": "{author}",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    if UserExists(username) == False:
+        log2term(
+            'E',
+            f"Can't promote user {username} to admin since it doesn't exist in the users database"
+        )
+        return {}
+
+    # Check if admin is already registered to the database
+    if AdminExists(username) == True:
+        log2term(
+            'E',
+            f"Can't promote user {username} to admin since that user is already an admin"
+        )
+        return {}
+
+    response = requests.post(
+        f"http://{flask_users.addr}:{flask_users.port}/API/new_admin/{username}/"
+    )
+
+    if response == None:
+        log2term('E',
+                 f"Failed to add user {username} as admin to the database")
+        return {}
+    log2term('I',
+             f"Successfully added user {username} as admin to the database")
+
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_ADMIN.value}",\n"username": "{author}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     return response.json()
 
 
 @app.route("/API/<string:username>/videos/", methods=['POST'])
-def AddVideo(username):
-    video_data = request.get_json()
+def NewVideo(username):
+    data = request.get_json()
+
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_VIDEO.value}",\n"username": "{username}",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "-"\n}}'
+    requests.post(url, headers=headers, data=body)
 
     if UserExists(username) == False:
-        return None
+        return {}
 
-    response = requests.post(f"http://127.0.0.1:7000/API/{username}/videos/",
-                             json=video_data)
+    response = requests.post(
+        f"http://{flask_videos.addr}:{flask_videos.port}/API/{username}/videos/",
+        json=data)
+
+    if response.json() == {}:
+        log2term('E', f"Failed to add new video to the database")
+        return {}
+
+    video_id = response.json()
+    video_id = video_id["video_id"]
+    log2term('D', f"Video with ID {video_id} was added to the database")
+
+    # Log the request to the videos flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_VIDEO.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_videos.addr}",\n"dest_port": "{flask_videos.port}",\n"content": "New video with ID {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    requests.put(
+        f"http://{flask_users.addr}:{flask_users.port}/API/{username}/stats/videos<Z/"
+    )
+
+    # Log the request to the users flask server (to iterate the videos counter un the user's stats)
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_VIDEO.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username} regarding video {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     return response.json()
 
 
 @app.route("/API/stats/views/<string:username>/<int:video_id>/",
            methods=['PUT', 'PATCH'])
 def AddView(username, video_id):
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.PUT_VIEW.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "For user {username} and for videos {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     if UserExists(username) == False:
-        return None
+        return {}
     if VideoExists(video_id) == False:
-        return None
+        return {}
 
     # Add view to user
     response = requests.put(
-        f"http://127.0.0.1:6000/API/{username}/stats/views/")
+        f"http://{flask_users.addr}:{flask_users.port}/API/{username}/stats/views/"
+    )
     user_views = response.json()
 
+    # Log the request to the users flask server (to iterate the views counter un the user's stats)
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_VIEW.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username} regarding video {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     # Add view to video
-    response = requests.put(f"http://127.0.0.1:7000/API/{video_id}/views/")
+    response = requests.put(
+        f"http://{flask_videos.addr}:{flask_videos.port}/API/{video_id}/views/"
+    )
     video_views = response.json()
+
+    # Log the request to the users flask server (to iterate the views counter un the user's stats)
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.PUT_VIDEO_VIEW.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_videos.addr}",\n"dest_port": "{flask_videos.port}",\n"content": "For video {video_id} regarding user {username}"\n}}'
+    requests.post(url, headers=headers, data=body)
 
     return {
         'user_views': user_views["user_views"],
@@ -165,74 +378,131 @@ def AddView(username, video_id):
 
 @app.route("/API/<string:username>/stats/", methods=['GET'])
 def GetUserStats(username):
-    if UserExists(username) == False:
-        return None
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_USERSTATS.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
 
-    response = requests.get(f"http://127.0.0.1:6000/API/{username}/stats/")
+    if UserExists(username) == False:
+        return {}
+
+    response = requests.get(
+        f"http://{flask_users.addr}:{flask_users.port}/API/{username}/stats/")
     if (response == None):
         log2term('W', f'There were no stats found for user {username}')
-        return None
+        return {}
+
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_USERSTATS.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+    requests.post(url, headers=headers, data=body)
 
     return response.json()
 
 
 @app.route("/API/users/", methods=['GET'])
 def GetAllUsers():
-    response = requests.get(f"http://127.0.0.1:6000/API/users/")
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_USERS_ADMINS.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "all"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    response = requests.get(
+        f"http://{flask_users.addr}:{flask_users.port}/API/users/")
     users = response.json()
+    users = users["users"]
 
-    response = requests.get(f"http://127.0.0.1:6000/API/admins/")
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_USER.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "all"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    response = requests.get(
+        f"http://{flask_users.addr}:{flask_users.port}/API/admins/")
     admins = response.json()
+    admins = admins["admins"]
 
-    return {"users": users["users"], "admins": admins["admins"]}
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_ADMIN.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "all"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    return {"users": users, "admins": admins}
 
 
-@app.route("/API/new_admin/<string:username>/", methods=['PUT', 'PATCH'])
-def NewAdmin(username):
-    if UserExists(username) == False:
-        log2term(
-            'E',
-            f"Can't promote user {username} to admin since it doesn't exist in the users database"
-        )
-        return None
+@app.route("/API/logs/", methods=['GET'])
+def GetAllLogs():
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_ALL_LOGS.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "-"\n}}'
+    requests.post(url, headers=headers, data=body)
 
-    # Check if admin is already registered to the database
-    if AdminExists(username) == True:
-        log2term(
-            'E',
-            f"Can't promote user {username} to admin since that user is already an admin"
-        )
-        return None
+    response = requests.get(
+        f"http://{flask_logs.addr}:{flask_logs.port}/API/logs/")
+    logs = response.json()
+    logs = logs["logs"]
 
-    response = requests.post(
-        f"http://127.0.0.1:6000/API/new_admin/{username}/")
-    return response.json()
+    # Log the request to the users flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_ALL_LOGS.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_logs.addr}",\n"dest_port": "{flask_logs.port}",\n"content": "-"\n}}'
+    requests.post(url, headers=headers, data=body)
+
+    return {"logs": logs}
 
 
 @app.route("/API/<int:video_id>/questions/answers/", methods=['GET'])
 def GetVideoQuestionsAndAnswers(video_id):
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_QAS.value}",\n"username": "-",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "For video {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     if VideoExists(video_id) == False:
-        return None
+        return {}
 
     response = requests.get(
-        f"http://127.0.0.1:8000/API/{video_id}/questions/answers/")
+        f"http://{flask_QAs.addr}:{flask_QAs.port}/API/{video_id}/questions/answers/"
+    )
     questions = response.json()
     questions = questions["video_questions"]
+
+    # Log the request to the QAs flask server
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.GET_QAS.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "For video {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
 
     # For each question and answer find the author's name
     for question in questions:
         # Find the author of the question
         username = question["username"]
-        response = requests.get(f"http://127.0.0.1:6000/API/users/{username}/")
+        response = requests.get(
+            f"http://{flask_users.addr}:{flask_users.port}/API/users/{username}/"
+        )
         user = response.json()
         question["user_name"] = user["name"]
+
+        # Log the request to the users flask server
+        url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+        headers = {'Content-Type': 'application/json'}
+        body = f'{{\n"event_type": "{EventType.GET_USER.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "{username}"\n}}'
+        requests.post(url, headers=headers, data=body)
 
         # Go through the question's answers
         answers = question["answers"]
         for answer in answers:
             # Find the author of the answer
             response = requests.get(
-                f"http://127.0.0.1:6000/API/users/{answer['username']}/")
+                f"http://{flask_users.addr}:{flask_users.port}/API/users/{answer['username']}/"
+            )
             user = response.json()
             answer["user_name"] = user["name"]
 
@@ -244,26 +514,48 @@ def NewQuestion(video_id):
     question_data = request.get_json()
     username = question_data["username"]
 
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_QUESTION.value}",\n"username": "{username}",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "For video {video_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     if VideoExists(video_id) == False:
         log2term(
             'E',
             f"Can't create a question about video {video_id} since the video doesn't exist in the database"
         )
-        return None
+        return {}
 
     if UserExists(username) == False:
         log2term(
             'E',
             f"Can't create the question submitted by user {username} since this user doesn't exist in the database"
         )
-        return None
+        return {}
 
     response = requests.post(
-        f"http://127.0.0.1:8000//API/videos/{video_id}/new_question/",
+        f"http://{flask_QAs.addr}:{flask_QAs.port}//API/videos/{video_id}/new_question/",
         json=question_data)
 
     if response != None:
-        requests.put(f"http://127.0.0.1:6000/API/{username}/stats/questions/")
+        question_id = response.json()
+        question_id = question_id["question_id"]
+        # Log the request to the QAs flask server
+        url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+        headers = {'Content-Type': 'application/json'}
+        body = f'{{\n"event_type": "{EventType.POST_NEW_QUESTION.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "New question with ID {question_id} for video {video_id}"\n}}'
+        requests.post(url, headers=headers, data=body)
+
+        requests.put(
+            f"http://{flask_users.addr}:{flask_users.port}/API/{username}/stats/questions/"
+        )
+
+        # Log the request to the users flask server
+        url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+        headers = {'Content-Type': 'application/json'}
+        body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_QUESTION.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username}, regarding question {question_id}"\n}}'
+        requests.post(url, headers=headers, data=body)
 
     return response.json()
 
@@ -273,26 +565,46 @@ def NewAnswer(question_id):
     answer_data = request.get_json()
     username = answer_data["username"]
 
+    # Log the request to the proxy
+    url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+    headers = {'Content-Type': 'application/json'}
+    body = f'{{\n"event_type": "{EventType.POST_NEW_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "-",\n"origin_port": "-",\n"dest_addr": "{me.addr}",\n"dest_port": "{me.port}",\n"content": "For question {question_id}"\n}}'
+    requests.post(url, headers=headers, data=body)
+
     if QuestionExists(question_id) == False:
         log2term(
             'E',
             f"Can't create an answer to question {question_id} since it doesn't exist in the database"
         )
-        return None
+        return {}
 
     if UserExists(username) == False:
         log2term(
             'E',
             f"Can't create an answer submitted by user {username} since this user doesn't exist in the database"
         )
-        return None
+        return {}
 
     response = requests.post(
-        f"http://127.0.0.1:8000//API/questions/{question_id}/new_answer/",
+        f"http://{flask_QAs.addr}:{flask_QAs.port}//API/questions/{question_id}/new_answer/",
         json=answer_data)
 
     if response != None:
-        requests.put(f"http://127.0.0.1:6000/API/{username}/stats/answers/")
+        # Log the request to the QAs flask server
+        url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+        headers = {'Content-Type': 'application/json'}
+        body = f'{{\n"event_type": "{EventType.POST_NEW_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "For question {question_id}. New answer with ID {response["answer_id"]}"\n}}'
+        requests.post(url, headers=headers, data=body)
+
+        requests.put(
+            f"http://{flask_users.addr}:{flask_users.port}/API/{username}/stats/answers/"
+        )
+
+        # Log the request to the users flask server
+        url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
+        headers = {'Content-Type': 'application/json'}
+        body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username}, regarding answer {response["answer_id"]}"\n}}'
+        requests.post(url, headers=headers, data=body)
 
     return response.json()
 
@@ -377,7 +689,8 @@ def Video(video_id):
 
         # Find the author's name through its username
         response = requests.get(
-            f'http://127.0.0.1:6000/API/users/{video_info["posted_by"]}/')
+            f'http://{flask_users.addr}:{flask_users.port}/API/users/{video_info["posted_by"]}/'
+        )
         user = response.json()
         user_name = user["name"]
 
@@ -395,4 +708,5 @@ def Video(video_id):
 #                        MAIN                          #
 ########################################################
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    readYAML('config.yaml')
+    app.run(host=me.addr, port=me.port, debug=True)

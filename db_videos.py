@@ -15,15 +15,10 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from aux.logs import log2term
-
 DB_FILE = "VQAdb_videos.sqlite"
 
 if path.exists(DB_FILE):
-    log2term('D', 'Database already exists')
     exit
-else:
-    log2term('D', 'Creating new database file')
 
 Engine = create_engine(f'sqlite:///{DB_FILE}', echo=False)
 Base = declarative_base()
@@ -73,15 +68,11 @@ def NewVideo(url=str, desc=str, posted_by=str):
         session.add(new_video)
         session.commit()
         session.close()
-        log2term('I', f'New video with ID {new_video.id}')
         return new_video.id
     except Exception as e:
         session.rollback()
         session.commit()
         session.close()
-        log2term(
-            'E',
-            f'{e.__class__.__name__} (when adding video {desc}): {str(e)}')
         return None
 
 

@@ -43,11 +43,31 @@
                 // Adding questions and answers to page
                 data["video_questions"].forEach(q => {
                     q_counter += 1;
+
+                    // Converting question time to strings
+                    let instant = q["instant"]; // Total number of seconds
+                    let hours = Math.floor(instant / 3600);
+                    let hours_str = hours.toString().padStart(2, 0);
+                    let minutes = Math.floor((instant - (3600 * hours)) / 60);
+                    let minutes_str = minutes.toString().padStart(2, 0);
+                    let seconds = Math.floor(instant - (3600 * hours) - (60 * minutes));
+                    let seconds_str = seconds.toString().padStart(2, 0);
+
                     // Add question to questions dropdown menu
-                    $("#questions_dropdown_menu").append('<div class="item" data-value="' + q["id"] + '">' + q["question"] + '</div>');
+                    if (hours > 0) {
+                        $("#questions_dropdown_menu").append('<div class="item" data-value="' + q["id"] + '">' + q["question"] + ' (' + hours_str + ':' + minutes_str + ':' + seconds_str + ')</div>');
+                    }
+                    else {
+                        $("#questions_dropdown_menu").append('<div class="item" data-value="' + q["id"] + '">' + q["question"] + ' (' + minutes_str + ':' + seconds_str + ')</div>');
+                    }
 
                     // Print question
-                    $('#questions_answers').append('<div class="ui fluid card"><div class="content"><div class="header">' + q["question"] + '</div><div class="meta"><a>' + q["user_name"] + '</a><span class="date">' + q["date"] + '</span></div></div></div></div>');
+                    if (hours > 0) {
+                        $('#questions_answers').append('<div class="ui fluid card"><div class="content"><div class="header">' + q["question"] + ' (' + hours_str + ':' + minutes_str + ':' + seconds_str + ')</div><div class="meta"><span>' + q["user_name"] + '</span><span class="date">' + q["date"] + '</span></div></div></div></div>');
+                    }
+                    else {
+                        $('#questions_answers').append('<div class="ui fluid card"><div class="content"><div class="header">' + q["question"] + ' (' + minutes_str + ':' + seconds_str + ')</div><div class="meta"><span>' + q["user_name"] + '</span><span class="date">' + q["date"] + '</span></div></div></div></div>');
+                    }
 
                     // Start section answers
                     $('#questions_answers').append('<div class="ui comments" id="question' + q_counter + '" style="margin-left: 50px;">');
@@ -58,7 +78,7 @@
 
                     q["answers"].forEach(a => {
                         a_counter += 1;
-                        $('#question' + q_counter).append('<div class="comment"><div class="content"><a class="author">' + a["user_name"] + '</a><div class="metadata"><span class="date">' + a["date"] + '</span></div><div class="text">' + a["answer"] + '</div></div></div>');
+                        $('#question' + q_counter).append('<div class="comment"><div class="content"><span class="author">' + a["user_name"] + '</span><div class="metadata"><span class="date">' + a["date"] + '</span></div><div class="text">' + a["answer"] + '</div></div></div>');
                     });
                     if (a_counter == 0) {
                         $('#question' + q_counter).append('<div class="text">There are still no answers to this question. Be the first to answer!</div>');
@@ -77,7 +97,7 @@
 
         let question_data = { 'question': question, 'instant': instant, 'username': username }
         $.ajax({
-            url: 'http://127.0.0.1:5000//API/videos/' + video_id + '/new_question/',
+            url: 'http://127.0.0.1:5000/API/videos/' + video_id + '/new_question/',
             type: 'POST',
             dataType: 'json',
             contentType: 'application/json',
@@ -130,7 +150,8 @@
 
         $("#new_question_button").click(function () {
             if (player.paused() == true && player.hasStarted() == true) {
-                let instant = player.currentTime();
+                let instant = Math.round(player.currentTime());
+                console.log("Instant: " + instant);
                 let question = $("#new_question_text").val();
                 if (question == "") {
                     console.log("W      Nothing was written in the question text area");
@@ -155,8 +176,9 @@
             }
         });
 
-        // Activate dropdowns
+        // Activate dropdowns and popups
         $('.ui.dropdown').dropdown();
+        $('[id$=_help]').popup(); // Activate all help pop ups
     });
 </script>
 
@@ -195,19 +217,30 @@
     <p>This is everything people have to say about the video. Join the conversation!</p>
     <div id="questions_answers"></div>
     <br>
-    <div class="ui button" id="update_QAs_button">Update Q&As</div>
+    <div class="ui button" id="update_QAs_button"><i class="grey sync alternate icon"></i>Update Q&As</div>
+    <br>
     <br>
 
-    <h4>Make a question</h4>
+
+    <h3>Make a question
+        <i id="question_help" class="grey question circle icon" data-title="How to make a question"
+            data-content="To make a question, the video must have started and be paused. Pause it in the moment of the video you want to associate to your answer. Write your question in the text area below and click 'Submit question'. Your question will be automatically added to the conversation!"
+            data-variation="wide"></i>
+    </h3>
     <form class="ui reply form">
         <div class="field">
             <textarea id="new_question_text"></textarea>
         </div>
-        <div class="ui button" id="new_question_button">Submit question</div>
+        <div class="ui primary button" id="new_question_button">Submit question</div>
     </form>
     <br>
 
-    <h4>Answer a question</h4>
+
+    <h3>Answer a question
+        <i id="answer_help" class="grey question circle icon" data-title="How to answer a question"
+            data-content="In the dropdown below select the question you wish to answer. Write your answer in the text area and click 'Submit answer'. Your answer will be automatically added to the conversation!"
+            data-variation="wide"></i>
+    </h3>
     <p>Select the question you wish to answer:</p>
     <div class="ui selection dropdown" id="questions_dropdown">
         <input type="hidden" name="question">
@@ -222,7 +255,7 @@
         <div class="field">
             <textarea id="new_answer_text"></textarea>
         </div>
-        <div class="ui button" id="new_answer_button">Submit answer</div>
+        <div class="ui primary button" id="new_answer_button">Submit answer</div>
     </form>
     <br>
 </body>

@@ -1,0 +1,21 @@
+# This is VQA By Joana's config file
+
+proxy:
+  address: '127.0.0.1'
+  port: 5000
+
+flask_users:
+  address: '127.0.0.1'
+  port: 6000
+
+flask_videos:
+  address: '127.0.0.1'
+  port: 7000
+
+flask_QAs:
+  address: '127.0.0.1'
+  port: 8000
+
+flask_logs:
+  address: '127.0.0.1'
+  port: 9000

@@ -14,15 +14,10 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from aux.logs import log2term
-
 DB_FILE = "VQAdb_users.sqlite"
 
 if path.exists(DB_FILE):
-    log2term('D', 'Database already exists')
     exit
-else:
-    log2term('D', 'Creating new database file')
 
 Engine = create_engine(f'sqlite:///{DB_FILE}', echo=False)
 Base = declarative_base()
@@ -123,13 +118,12 @@ def NewUser(username=str, email=str, name=str):
         session.add(new_stats)
         session.commit()
         session.close()
-        log2term('I', f'New user with username {new_user.username}')
         return new_user.username
     except Exception as e:
         session.rollback()
         session.commit()
         session.close()
-        log2term('E', f'{e.__class__.__name__} (when adding user {username})')
+        print(e)
         return None
 
 
@@ -140,16 +134,12 @@ def NewAdmin(username=str):
         session.add(new_admin)
         session.commit()
         session.close()
-        log2term('I', f'New admin with username {new_admin.username}')
         return new_admin.username
     except Exception as e:
         session.rollback()
         session.commit()
         session.close()
-        log2term(
-            'E',
-            f'{e.__class__.__name__} (when adding admin with username {username})'
-        )
+        print(e)
         return None
 
 
@@ -171,7 +161,6 @@ def Add2VideosPosted(username=str):
     stats.videos += 1
     session.commit()
     session.close()
-    log2term('I', f'Iterated posted videos counter for user {username}')
     return stats.videos
 
 
@@ -181,7 +170,6 @@ def AddView2User(username=str):
         UserStats.username == username).first()
     user_stats.views += 1
 
-    # Save iterations to DB
     session.commit()
     session.close()
     return user_stats.views
@@ -193,7 +181,6 @@ def Add2Questions(username=str):
         UserStats.username == username).first()
     user_stats.questions += 1
 
-    # Save iterations to DB
     session.commit()
     session.close()
     return user_stats.questions
@@ -205,7 +192,6 @@ def Add2Answers(username=str):
         UserStats.username == username).first()
     user_stats.answers += 1
 
-    # Save iterations to DB
     session.commit()
     session.close()
     return user_stats.answers

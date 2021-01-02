@@ -13,15 +13,10 @@ from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from aux.logs import log2term
-
 DB_FILE = "VQAdb_QAs.sqlite"
 
 if path.exists(DB_FILE):
-    log2term('D', 'Database already exists')
     exit
-else:
-    log2term('D', 'Creating new database file')
 
 Engine = create_engine(f'sqlite:///{DB_FILE}', echo=False)
 Base = declarative_base()
@@ -113,20 +108,13 @@ def NewQuestion(question=str, instant=int, username=str, video_id=int):
     try:
         session.add(new_question)
         session.commit()
-        log2term(
-            'I',
-            f'New question with ID {new_question.id}, regarding video {video_id}'
-        )
         session.close()
         return new_question.id
     except Exception as e:
         session.rollback()
         session.commit()
         session.close()
-        log2term(
-            'E',
-            f'{e.__class__.__name__} (when creating question about video {video_id})'
-        )
+        print(e)
         return None
 
 
@@ -137,20 +125,12 @@ def NewAnswer(answer=str, question_id=int, username=str):
     try:
         session.add(new_answer)
         session.commit()
-        log2term(
-            'I',
-            f'New answer with ID {new_answer.id} to question with ID {question_id}'
-        )
         session.close()
         return new_answer.id
     except Exception as e:
         session.rollback()
         session.commit()
         session.close()
-        log2term(
-            'E',
-            f'{e.__class__.__name__} (when creating answer to question {question_id})'
-        )
         return None
 
 

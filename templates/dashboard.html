@@ -3,13 +3,15 @@
 {% block script %}
 
 <meta id="is_admin" data-admin="{{ is_admin }}">
+<meta id="username" data-username="{{ username }}">
 
 <script>
     var is_admin = $('#is_admin').data("admin");
+    var username = $('#username').data("username");
     var users_data = null;
     var admins = null;
 
-    function refreshVideos(username) {
+    function refreshVideos() {
         console.log("D      Refreshing videos posted");
 
         $.ajax({
@@ -17,14 +19,14 @@
             type: 'GET',
             dataType: 'json',
             success: function (data) {
-                console.log(data)
+                console.log(data);
 
                 // Clearing user videos table
                 $('#videos_menu1').empty();
                 // Adding videos to videos table
                 data["user_videos"].forEach(v => {
                     $('#videos_menu1').
-                        append('<a class="item" href="/videos/' + v["id"] + '">' + v["desc"] + '</a>');
+                        append('<a class="item" href="http://127.0.0.1:5000/videos/' + v["id"] + '">' + v["desc"] + '</a>');
                 });
 
                 // Clearing other users' videos table
@@ -32,7 +34,28 @@
                 // Adding videos to videos table
                 data["other_users_videos"].forEach(v => {
                     $('#videos_menu2').
-                        append('<a class="item" href="' + v["url"] + '">' + v["desc"] + '</a>');
+                        append('<a class="item" href="http://127.0.0.1:5000/videos/' + v["id"] + '">' + v["desc"] + '</a>');
+                });
+            },
+        });
+    }
+
+    function refreshLogs() {
+        console.log("D      Refreshing logs");
+
+        $.ajax({
+            url: 'http://127.0.0.1:5000/API/logs/',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+
+                // Clean table
+                $('#logs_table > tbody:last-child').empty();
+                // Update table with new info
+                data["logs"].forEach(l => {
+                    $('#logs_table > tbody:last-child').
+                        append('<tr> <td>' + l["id"] + '</td><td>' + l["event_type"] + '</td><td>' + l["username"] + '</td><td>' + l["date"] + '</td><td>' + l["origin_addr"] + '</td><td>' + l["origin_port"] + '</td><td>' + l["dest_addr"] + '</td><td>' + l["dest_port"] + '</td><td>' + l["content"] + '</td></tr>');
                 });
             },
         });
@@ -55,7 +78,7 @@
                 }
                 else {
                     console.log("I      Video with ID " + data["video_id"] + " was successfuly added to the database")
-                    refreshVideos("{{ username }}")
+                    refreshVideos()
                     $("#url_input").val("")
                     $("#desc_input").val("")
                 }
@@ -152,13 +175,16 @@
         });
     }
 
-    function promote2Admin(username) {
-        console.log("D      Promoting user " + username + " to admin");
+    function promote2Admin(_username) {
+        console.log("D      Promoting user " + _username + " to admin");
 
+        let info = { 'author': username }
         $.ajax({
-            url: 'http://127.0.0.1:5000/API/new_admin/' + username + '/',
-            type: 'PUT',
+            url: 'http://127.0.0.1:5000/API/new_admin/' + _username + '/',
+            type: 'POST',
             dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify(info),
             success: function (data) {
                 console.log(data);
                 if (data["username"] != null) {
@@ -172,17 +198,18 @@
     }
 
     $(document).ready(function () {
-        refreshVideos('{{ username }}');
+        refreshVideos();
         if (is_admin) {
             getUsers4Dropdowns();
         }
+        refreshLogs();
 
         $("#welcome_button").click(function () {
             window.location.href = "{{ url_for('Index') }}";
         });
 
         $("#update_videos_button").click(function () {
-            refreshVideos('{{ username }}');
+            refreshVideos();
         });
 
         $("#new_video_button").click(function () {
@@ -227,8 +254,13 @@
             }
         });
 
-        // Activate dropdowns
+        $("#update_logs_button").click(function () {
+            refreshLogs();
+        });
+
+        // Activate dropdowns and popups
         $('.ui.dropdown').dropdown();
+        $('[id$=_help]').popup(); // Activate all help pop ups
     });
 </script>
 
@@ -246,32 +278,39 @@
     <h2>Videos posted</h2>
     <p>Select the video you want to watch!</p>
 
-    <h3>Your videos</h3>
-    <p>These are all the videos you've posted.</p>
+    <h3>Your videos
+        <i id="my_videos_help" class="grey question circle icon" data-content="These are all the videos you've posted"
+            data-variation="wide"></i>
+    </h3>
     <div class="ui fluid vertical menu" id="videos_menu1">
     </div>
 
-    <h3>Other users' videos</h3>
-    <p>These are all the videos other users have posted.</p>
+    <h3>Other users' videos
+        <i id="others_videos_help" class="grey question circle icon"
+            data-content="These are all of the videos other users have posted" data-variation="wide"></i>
+    </h3>
     <div class="ui fluid vertical menu" id="videos_menu2">
     </div>
 
     <button class="ui button" id="update_videos_button">
-        Update videos
+        <i class="grey sync alternate icon"></i>
+        Refresh videos
     </button>
+    <br>
+    <br>
 
-    <h3>Add a new video</h3>
-    <p>To add a new video to the app, find it's YouTube URL and a short
-        description of the video (the video's title, for example) and paste
-        them below. Finally click "Add video" to add it to the database.
-    </p>
+    <h3>Add a new video
+        <i id="add_video_help" class="grey question circle icon" data-title="How to add a new video"
+            data-content="To add a new video to the app, find it's YouTube URL and a short description (the video's title, for example) and paste them in the fields below. Finally click 'Add video' to add it to the database."
+            data-variation="wide"></i>
+    </h3>
     <div class="ui input">
         <input type="text" placeholder="YouTube URL" id="url_input">
     </div>
     <div class="ui input">
         <input type="text" placeholder="Description" id="desc_input">
     </div>
-    <button class="ui button" id="new_video_button">
+    <button class="ui primary button" id="new_video_button">
         Add video
     </button>
 
@@ -280,11 +319,16 @@
     {% if is_admin %}
 
     <h2>Admin options</h2>
-
-    <h3>View user stats</h3>
-    <p>As an admin you have an overview of other users' activity on the app.
-        Select below which user's activity you want to view.
+    <p>As an Admin you have an exclusive overview of the entire app.
+        This includes user stats, system logs and you can also promote other users to admins!
     </p>
+
+    <h3>View user stats
+        <i id="stats_help" class="grey question circle icon" data-title="How to see users' stats"
+            data-content="The dropdown menu below list all users registered to the app. Use this menu to select which user whose activity you want to view and click the 'Select' button. The plot with the user's stats will automatically appear."
+            data-variation="wide">
+        </i>
+    </h3>
     <div class="ui selection dropdown" id="stats_dropdown">
         <input type="hidden" name="user">
         <i class="dropdown icon"></i>
@@ -297,10 +341,12 @@
     </button>
     <div id="user_stats_plot"></div>
 
-    <h3>Promote to admin</h3>
-    <p>As an admin you can promote other users to become admins too.
-        Select below who you want to promote as an admin!
-    </p>
+    <h3>Promote to admin
+        <i id="promote_help" class="grey question circle icon" data-title="How to promote a user to admin"
+            data-content="The dropdown menu below shows all users which are not admins. Use it this menu to select the user you want to promote and click the 'Select' button."
+            data-variation="wide">
+        </i>
+    </h3>
     <div class="ui selection dropdown" id="new_admin_dropdown">
         <input type="hidden" name="user">
         <i class="dropdown icon"></i>
@@ -310,6 +356,34 @@
     <button class="ui button" id="new_admin_button">
         Select
     </button>
+
+    <h3>App logs
+        <i id="promote_help" class="grey question circle icon" data-title="How do logs work?"
+            data-content="An app log is created every time there's an interaction between a user and the app. Every log has an event-type, a username, a date, origin IP address and port, destination IP address and port and content. "
+            data-variation="wide">
+        </i>
+    </h3>
+    <button class="ui button" id="update_logs_button">
+        <i class="grey sync alternate icon"></i>
+        Refresh logs
+    </button>
+    <table class="ui celled table" id="logs_table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Event-Type</th>
+                <th>Username</th>
+                <th>Date</th>
+                <th>Origin IP Address</th>
+                <th>Origin Port</th>
+                <th>Destination IP Address</th>
+                <th>Destination Port</th>
+                <th>Content</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
 
     {% endif %}
 
