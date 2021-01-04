@@ -2,11 +2,15 @@
 VQA By Joana was an app developed for the Internet Based Systems Architecture course.  
 It is a simple YouTube-like app in which users can post videos, view them and post questions and answers about them.
 
-## Table of contents
-- [App components](#heading)
-  * [Databases](#sub-heading)
-  * [Servers](#sub-heading)
-- [Setting-up the app](#heading-1)
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [App components](#app-components)
+  * [Databases](#databases)
+  * [Servers](#servers)
+- [Setting-up the app](#setting-up-the-app)
+
+<!-- markdown-toc end -->
 
 ## App components
 ### Databases
