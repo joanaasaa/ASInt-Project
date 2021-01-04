@@ -24,7 +24,7 @@ A question has the following information:
     * Instant: Instant of the video (in seconds) for which the question is
     * Username: The user who made the question
     * Video ID: Video for which the question is
-    * Date: When the question was made\
+    * Date: When the question was made \\
 An answer has the following information:
     * ID: Integer which is automatically generated and is used as a unique identifier for the answer
     * Answer: A string with the actual answer
@@ -36,7 +36,7 @@ An answer has the following information:
     * Date: When the communication happened
     * Origin IP address and port: Server who initiated the communication
     * Destination IP address and port: Location of teh server who has the destination endpoint
-    * Content: Adds more information to the log beyond the event-type\
+    * Content: Adds more information to the log beyond the event-type \\
 Important notes regarding the logs database:
     * When the origin address and port are '-', this means that the request was made by a user through the app's front-end webpages
     * Only POST requests have a username associated to them
@@ -47,7 +47,7 @@ Important notes regarding the logs database:
 There are 6 servers which make up the VQA By Joana app:
 * **Proxy flask server** (```proxy.py```): The Proxy is a flask server which acts as the interface between the user and the backend of the app. It does this by providing 2 types of endpoints:
     * Endpoints to HTML interface webpages. These are directly access by the user and are the front-end of the app
-    * REST API endpoints, which interact with the other app servers. These are accessed by the user through the HTML front-end webpages  
+    * REST API endpoints, which interact with the other app servers. These are accessed by the user through the HTML front-end webpages  \\
 Since there's important information that has be consistent across databases, the Proxy is the one to make sure that all information adds up between DBs. For example, to create a new video (which has a user associated to it, the user who post it to the app), it's necessary to make sure that the username provided (as the user who posted the video) must exist in the user's database. This and similar checks are done by the Proxy
 * **Users DB flask server** (```flask_users.py```): This flask server provides REST API endpoints which directly interact with the users database. These endpoints are accessed by the user through the Proxy
 * **Videos DB flask server** (```flask_videos.py```): This flask server provides REST API endpoints which directly interact with the videos database. These endpoints are accessed by the user through the Proxy
