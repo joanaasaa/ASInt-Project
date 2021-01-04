@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""
+Flask Logs Module
+================_
+
+The Flask Logs Module is a Flask server which provides
+API REST endpoints to interact directly with the logs 
+database. 
+"""
+
 import os
 import json
 import yaml

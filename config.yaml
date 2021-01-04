@@ -7,6 +7,8 @@ proxy:
 flask_users:
   address: '127.0.0.1'
   port: 6000
+  alt_address: '127.0.0.1'
+  alt_port: 6001
 
 flask_videos:
   address: '127.0.0.1'

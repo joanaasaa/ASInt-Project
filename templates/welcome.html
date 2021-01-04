@@ -2,28 +2,37 @@
 
 {% block script %}
 
+<meta id="logged_in" data-logged="{{ logged_in }}">
+
 <script>
+	var logged_in = $('#logged_in').data("logged");
+
 	$(document).ready(function () {
 		$("#dashboard_button").click(
 			function () {
-				console.log("Dashboard button was clicked")
 				window.location.href = "{{ url_for('Dashboard') }}";
 			}
 		)
 
 		$("#logout_button").click(
 			function () {
-				console.log("Log out button was clicked")
 				window.location.href = "{{ url_for('LogOut') }}";
 			}
 		)
 
 		$("#login_button").click(
 			function () {
-				console.log("Log in button was clicked")
 				window.location.href = "{{ url_for('fenix-example.login') }}";
 			}
 		)
+
+		if (logged_in == "True") {
+			$('body').toast({
+				class: 'success',
+				title: "You're logged in!",
+				message: "You've successfully logged in with your Fénix account",
+			});
+		}
 	});
 </script>
 
@@ -36,7 +45,6 @@
 
 	{% if logged_in %}
 
-	<p>You are logged in!</p>
 	<button class="ui button" id="dashboard_button">Go to dashboard</button>
 	<br>
 	<br>
@@ -44,8 +52,7 @@
 
 	{% else %}
 
-	<p>Log in using Fenix</p>
-	<button class="ui button" id="login_button">Log in</button>
+	<button class="ui button" id="login_button">Log in using Fénix</button>
 
 	{% endif %}
 

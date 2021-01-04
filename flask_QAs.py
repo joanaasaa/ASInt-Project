@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+Flask QAs Module
+================
+
+The Flask QAs Module is a Flask server which provides
+API REST endpoints to interact directly with the video's 
+questions and answers database. 
+"""
 
 import os
 import yaml

@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Flask Videos Module
+===================
+
+The Flask Videos Module provides API REST endpoints to interact
+directly with the videos database.
+"""
 
 import os
 import json

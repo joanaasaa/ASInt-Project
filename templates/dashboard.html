@@ -36,6 +36,19 @@
                     $('#videos_menu2').
                         append('<a class="item" href="http://127.0.0.1:5000/videos/' + v["id"] + '">' + v["desc"] + '</a>');
                 });
+
+                $('body').toast({
+                    class: 'success',
+                    title: 'Videos are up-to-date',
+                    message: "The videos list was successfully updated",
+                });
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an refresing the videos list",
+                });
             },
         });
     }
@@ -57,6 +70,19 @@
                     $('#logs_table > tbody:last-child').
                         append('<tr> <td>' + l["id"] + '</td><td>' + l["event_type"] + '</td><td>' + l["username"] + '</td><td>' + l["date"] + '</td><td>' + l["origin_addr"] + '</td><td>' + l["origin_port"] + '</td><td>' + l["dest_addr"] + '</td><td>' + l["dest_port"] + '</td><td>' + l["content"] + '</td></tr>');
                 });
+
+                $('body').toast({
+                    class: 'success',
+                    title: 'Logs are up-to-date',
+                    message: "The logs table was successfully updated",
+                });
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an error fetching the app's logs from the database",
+                });
             },
         });
     }
@@ -75,13 +101,32 @@
                 console.log(data);
                 if (data["video_id"] == null) {
                     console.log("E      Video couldn't be added to the database".red)
+
+                    $('body').toast({
+                        class: 'error',
+                        title: 'Error',
+                        message: "There was an error when adding video",
+                    });
                 }
                 else {
                     console.log("I      Video with ID " + data["video_id"] + " was successfuly added to the database")
                     refreshVideos()
                     $("#url_input").val("")
                     $("#desc_input").val("")
+
+                    $('body').toast({
+                        class: 'success',
+                        title: 'New video',
+                        message: "Video with ID " + data["video_id"] + " was successfully added to the database",
+                    });
                 }
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an error when adding video",
+                });
             },
         });
     }
@@ -125,7 +170,14 @@
                     $("#new_admin_dropdown_menu").
                         append('<div class="item" data-value="' + v["username"] + '">' + v["name"] + '</div>');
                 });
-            }
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an error fetching the app's users from the database",
+                });
+            },
         });
     }
 
@@ -171,7 +223,14 @@
             success: function (data) {
                 console.log(data);
                 drawPlot(data);
-            }
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an error fetching the stats for user " + username,
+                });
+            },
         });
     }
 
@@ -189,11 +248,28 @@
                 console.log(data);
                 if (data["username"] != null) {
                     console.log("I      You've successfully promoted a new user to admin");
+                    $('body').toast({
+                        class: 'success',
+                        title: 'New admin',
+                        message: "User " + username + " was successfully promoted to admin",
+                    });
                 }
                 else {
                     console.log("E      Something went wrong when promoting the user to admin");
+                    $('body').toast({
+                        class: 'error',
+                        title: 'Error',
+                        message: "There was an error promoting user " + username + "to admin",
+                    });
                 }
-            }
+            },
+            error: function () {
+                $('body').toast({
+                    class: 'error',
+                    title: 'Error',
+                    message: "There was an error promoting user " + username + "to admin",
+                });
+            },
         });
     }
 

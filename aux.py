@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Aux
+===
+
+This file provides useful functions and classes which are 
+used by the app's backend.
+"""
 
 from enum import Enum
 from termcolor import colored
@@ -6,16 +13,34 @@ from termcolor import cprint
 
 
 class ServerConfig:
-    def __init__(self, addr=str, port=int):
+    """Class to save and interact with teh flask servers'
+    information.
+    """
+    def __init__(self, addr: str, port: int):
         self.addr = addr
         self.port = port
 
-    def set(self, addr=str, port=int):
+    def set(self, addr: str, port: int):
+        """Method to set the server's port and IP address.
+
+        Parameters
+        ----------
+        addr : str
+            The server's IP address.
+        port : int
+            The port where the server is working.
+        """
         self.addr = addr
         self.port = port
 
 
 class EventType(Enum):
+    """Class used to categorize the types of communications 
+    between the system's members, which can be logged. 
+    
+    A communication between the system's users and servers 
+    is, therefore, considered to be an event.
+    """
     GET_USER = 1
     GET_ADMIN = 2
     GET_USERS_ADMINS = 3
@@ -26,9 +51,9 @@ class EventType(Enum):
     PUT_VIEW = 8
     PUT_VIDEO_VIEW = 9
     PUT_USERSTATS_VIDEO = 10
-    PUT_USERSTATS_VIEW = 12
+    PUT_USERSTATS_VIEW = 11
     PUT_USERSTATS_QUESTION = 12
-    PUT_USERSTSTS_ANSWER = 13
+    PUT_USERSTATS_ANSWER = 13
     POST_NEW_USER = 14
     POST_NEW_ADMIN = 15
     POST_NEW_VIDEO = 16

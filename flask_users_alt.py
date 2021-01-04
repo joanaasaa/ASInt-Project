@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Flask Users Module
-==================
+Flask Users Alt Module
+======================
 
-The Flask Users Module provides API REST endpoints to interact
-directly with the users database.
+The Flask Users Module Alt is a Flask server which provides
+API REST endpoints to interact directly with the users 
+database. This server is a copy of the Flask Users Module
+and is a secondary server in case of failure by the former.
+The usage of this server ig managed by the Proxy Module.
 """
 
 import os
@@ -46,7 +49,7 @@ def readYAML(filename=str):
 
     flask_users_dict = config["flask_users"]
 
-    me.set(flask_users_dict["address"], flask_users_dict["port"])
+    me.set(flask_users_dict["alt_address"], flask_users_dict["alt_port"])
 
 
 ########################################################

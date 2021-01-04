@@ -22,6 +22,9 @@ import os
 import requests
 import json
 import yaml
+import threading
+import time
+from datetime import datetime
 
 from flask import Flask
 from flask import redirect
@@ -33,20 +36,15 @@ from flask import request
 from flask_dance.consumer import OAuth2ConsumerBlueprint
 from oauthlib.oauth2.rfc6749.errors import TokenExpiredError
 
+import nmap3
+
 from aux import ServerConfig
 from aux import EventType
 from aux import log2term
 
-app = Flask(__name__)
+SCAN_PERIOD = 10
 
-########################################################
-#                  SERVERS' CONFIGS                    #
-########################################################
-me = ServerConfig('', 0)
-flask_users = ServerConfig('', 0)
-flask_videos = ServerConfig('', 0)
-flask_QAs = ServerConfig('', 0)
-flask_logs = ServerConfig('', 0)
+app = Flask(__name__)
 
 ########################################################
 #                        OAUTH                         #
@@ -71,27 +69,6 @@ app.register_blueprint(fenix_blueprint)
 ########################################################
 #                      FUNCTIONS                       #
 ########################################################
-def readYAML(filename=str):
-    try:
-        stream = open("config.yaml", 'r')
-        config = yaml.safe_load(stream)
-    except yaml.YAMLError as e:
-        log2term('E', f'While opening config file: {e}')
-        exit
-
-    proxy_dict = config["proxy"]
-    flask_users_dict = config["flask_users"]
-    flask_videos_dict = config["flask_videos"]
-    flask_QAs_dict = config["flask_QAs"]
-    flask_logs_dict = config["flask_logs"]
-
-    me.set(proxy_dict["address"], proxy_dict["port"])
-    flask_users.set(flask_users_dict["address"], flask_users_dict["port"])
-    flask_videos.set(flask_videos_dict["address"], flask_videos_dict["port"])
-    flask_QAs.set(flask_QAs_dict["address"], flask_QAs_dict["port"])
-    flask_logs.set(flask_logs_dict["address"], flask_logs_dict["port"])
-
-
 def UserExists(username) -> bool:
     response = requests.get(
         f"http://{flask_users.addr}:{flask_users.port}/API/users/{username}/")
@@ -155,7 +132,7 @@ def QuestionExists(question_id) -> bool:
     # Log the request to the QAs flask server
     url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
     headers = {'Content-Type': 'application/json'}
-    body = f'{{\n"event_type": "{EventType.GET_QUESTION.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "{question_id}"\n}}'
+    body = f'{{\n"event_type": "{EventType.GET_QAS.value}",\n"username": "-",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "{question_id}"\n}}'
     requests.post(url, headers=headers, data=body)
 
     log2term('D', f"Question with ID {question_id} exists in the database")
@@ -586,14 +563,15 @@ def NewAnswer(question_id):
         return {}
 
     response = requests.post(
-        f"http://{flask_QAs.addr}:{flask_QAs.port}//API/questions/{question_id}/new_answer/",
+        f"http://{flask_QAs.addr}:{flask_QAs.port}/API/questions/{question_id}/new_answer/",
         json=answer_data)
+    response_json = response.json()
 
     if response != None:
         # Log the request to the QAs flask server
         url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
         headers = {'Content-Type': 'application/json'}
-        body = f'{{\n"event_type": "{EventType.POST_NEW_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "For question {question_id}. New answer with ID {response["answer_id"]}"\n}}'
+        body = f'{{\n"event_type": "{EventType.POST_NEW_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_QAs.addr}",\n"dest_port": "{flask_QAs.port}",\n"content": "For question {question_id}. New answer with ID {response_json["answer_id"]}"\n}}'
         requests.post(url, headers=headers, data=body)
 
         requests.put(
@@ -603,10 +581,10 @@ def NewAnswer(question_id):
         # Log the request to the users flask server
         url = f"http://{flask_logs.addr}:{flask_logs.port}/API/new_log/"
         headers = {'Content-Type': 'application/json'}
-        body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username}, regarding answer {response["answer_id"]}"\n}}'
+        body = f'{{\n"event_type": "{EventType.PUT_USERSTATS_ANSWER.value}",\n"username": "{username}",\n"origin_addr": "{me.addr}",\n"origin_port": "{me.port}",\n"dest_addr": "{flask_users.addr}",\n"dest_port": "{flask_users.port}",\n"content": "For user {username}, regarding answer {response_json["answer_id"]}"\n}}'
         requests.post(url, headers=headers, data=body)
 
-    return response.json()
+    return response_json
 
 
 ########################################################
@@ -707,6 +685,73 @@ def Video(video_id):
 ########################################################
 #                        MAIN                          #
 ########################################################
+def readYAML(filename=str):
+    try:
+        stream = open("config.yaml", 'r')
+        config = yaml.safe_load(stream)
+    except yaml.YAMLError as e:
+        log2term('E', f'While opening config file: {e}')
+        exit
+
+    proxy_dict = config["proxy"]
+    flask_users_dict = config["flask_users"]
+    flask_videos_dict = config["flask_videos"]
+    flask_QAs_dict = config["flask_QAs"]
+    flask_logs_dict = config["flask_logs"]
+
+    global me
+    me = ServerConfig(proxy_dict["address"], proxy_dict["port"])
+
+    global flask_users
+    flask_users = ServerConfig(flask_users_dict["address"],
+                               flask_users_dict["port"])
+
+    global flask_videos
+    flask_videos = ServerConfig(flask_videos_dict["address"],
+                                flask_videos_dict["port"])
+
+    global flask_QAs
+    flask_QAs = ServerConfig(flask_QAs_dict["address"], flask_QAs_dict["port"])
+
+    global flask_logs
+    flask_logs = ServerConfig(flask_logs_dict["address"],
+                              flask_logs_dict["port"])
+
+    global flask_users_alt
+    flask_users_alt = ServerConfig(flask_users_dict["alt_address"],
+                                   flask_users_dict["alt_port"])
+
+
+def servers_check():
+    original = ServerConfig(flask_users.addr, flask_users.port)
+    alt = ServerConfig(flask_users_alt.addr, flask_users_alt.port)
+
+    nm = nmap3.Nmap()
+    while True:
+        before_scan = datetime.now()
+        res = nm.scan_top_ports(f"{original.addr}", args=f"-p {original.port}")
+        state = res[f"{original.addr}"]["ports"][0]["state"]
+        #print(f"{original.addr}:{original.port}->{state}")
+        after_scan = datetime.now()
+
+        # Change to the back-up server if the original is down
+        if state == 'closed' and (flask_users.addr != alt.addr
+                                  or flask_users.port != alt.port):
+            flask_users.set(alt.addr, alt.port)
+            log2term('D', 'Users server set to be the alternative server')
+
+        # Change to the original server if it's back up
+        if state == 'open' and (flask_users.addr == alt.addr
+                                and flask_users.port == alt.port):
+            flask_users.set(original.addr, original.port)
+            log2term('D', 'Users server set to be the default server')
+
+        time.sleep(SCAN_PERIOD - (after_scan - before_scan).total_seconds())
+
+
 if __name__ == "__main__":
     readYAML('config.yaml')
+    thread = threading.Thread(target=servers_check)
+    thread.start()
+
     app.run(host=me.addr, port=me.port, debug=True)
