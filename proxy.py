@@ -148,10 +148,10 @@ def NewUser(username, email, name):
         )
         return {}
 
-    url = f"http://{flask_users.addr}:{flask_users.port}/API/new_user/{username}/"
-    headers = {'Content-Type': 'application/json'}
-    body = f'{{\n"name": "{name}",\n"email": "{email}"\n}}'
-    response = requests.post(url, headers=headers, data=body)
+    url = f'http://{flask_users.addr}:{flask_users.port}/API/new_user/{username}/'
+    body = f'{{"name":"{name}", "email":"{email}"}}'
+    json_body = json.loads(body)
+    response = requests.post(url, json=json_body)
 
     if response.json() == {}:
         log2term('E', f"Failed to add user {username} to the database")
@@ -610,8 +610,10 @@ def Dashboard():
         return redirect(url_for("fenix-example.login"))
     else:
         try:
+            print("HERE")
             user_data = (
                 fenix_blueprint.session.get("/api/fenix/v1/person/")).json()
+            print("HERE")
         except TokenExpiredError as e:
             log2term('E', f'{e.__class__.__name__}. Logging out...')
             return redirect(url_for("LogOut"))

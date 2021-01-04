@@ -24,6 +24,9 @@ import db_logs
 db_users.NewUser('ist426524', 'joana.sa@tecnico.ulisboa.pt', 'Joana Sá')
 db_users.NewAdmin('ist426524')
 
+db_users.NewUser('ist14028', 'joao.n.silva@tecnico.ulisboa.pt', 'João Silva')
+db_users.NewAdmin('ist14028')
+
 db_users.NewUser('ist186412', 'filipe.reynaud@tecnico.ulisboa.pt',
                  'Filipe Reynaud')
 
