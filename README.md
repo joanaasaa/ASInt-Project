@@ -24,7 +24,7 @@ A question has the following information:
     * Instant: Instant of the video (in seconds) for which the question is
     * Username: The user who made the question
     * Video ID: Video for which the question is
-    * Date: When the question was made  
+    * Date: When the question was made\
 An answer has the following information:
     * ID: Integer which is automatically generated and is used as a unique identifier for the answer
     * Answer: A string with the actual answer
@@ -36,7 +36,7 @@ An answer has the following information:
     * Date: When the communication happened
     * Origin IP address and port: Server who initiated the communication
     * Destination IP address and port: Location of teh server who has the destination endpoint
-    * Content: Adds more information to the log beyond the event-type  
+    * Content: Adds more information to the log beyond the event-type\
 Important notes regarding the logs database:
     * When the origin address and port are '-', this means that the request was made by a user through the app's front-end webpages
     * Only POST requests have a username associated to them
