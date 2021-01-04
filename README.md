@@ -17,7 +17,7 @@ A video has the following information:
     * Posted By: Username of the user who posted the video
     * Views: Total number of views the video has
     * Date: When the video was posted
-* **QAs database** (```db_QAs.py```):This database is made-up of 2 tables, one for videos questions and another for their answers. 
+* **QAs database** (```db_QAs.py```):This database is made-up of 2 tables, one for videos questions and another for their answers. \\
 A question has the following information:
     * ID: Integer which is automatically generated and is used as a unique identifier for the question
     * Question: A string with the actual question
@@ -49,7 +49,7 @@ Important notes regarding the logs database:
 There are 6 servers which make up the VQA By Joana app:
 * **Proxy flask server** (```proxy.py```): The Proxy is a flask server which acts as the interface between the user and the backend of the app. It does this by providing 2 types of endpoints:
     * Endpoints to HTML interface webpages. These are directly access by the user and are the front-end of the app
-    * REST API endpoints, which interact with the other app servers. These are accessed by the user through the HTML front-end webpages  \\
+    * REST API endpoints, which interact with the other app servers. These are accessed by the user through the HTML front-end webpages
 Since there's important information that has be consistent across databases, the Proxy is the one to make sure that all information adds up between DBs. For example, to create a new video (which has a user associated to it, the user who post it to the app), it's necessary to make sure that the username provided (as the user who posted the video) must exist in the user's database. This and similar checks are done by the Proxy
 * **Users DB flask server** (```flask_users.py```): This flask server provides REST API endpoints which directly interact with the users database. These endpoints are accessed by the user through the Proxy
 * **Videos DB flask server** (```flask_videos.py```): This flask server provides REST API endpoints which directly interact with the videos database. These endpoints are accessed by the user through the Proxy
