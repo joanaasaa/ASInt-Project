@@ -9,6 +9,7 @@ database.
 """
 
 import os
+import signal
 import json
 import yaml
 
@@ -43,8 +44,8 @@ def readYAML(filename=str):
         stream = open("config.yaml", 'r')
         config = yaml.safe_load(stream)
     except yaml.YAMLError as e:
-        log2term('E', f'While opening config file: {e}')
-        exit
+        log2term('F', f'While opening config file: {e}')
+        os.kill(pid, signal.SIGINT)  # Kill server
 
     flask_logs_dict = config["flask_logs"]
 
@@ -110,5 +111,8 @@ def GetLogs():
 #                        MAIN                          #
 ########################################################
 if __name__ == "__main__":
+    global pid
+    pid = os.getpid()
+
     readYAML('config.yaml')
     app.run(host=me.addr, port=me.port, debug=True)

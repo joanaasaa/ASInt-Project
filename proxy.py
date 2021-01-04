@@ -19,6 +19,7 @@ the proxy to access the databases.
 """
 
 import os
+import signal
 import requests
 import json
 import yaml
@@ -690,8 +691,8 @@ def readYAML(filename=str):
         stream = open("config.yaml", 'r')
         config = yaml.safe_load(stream)
     except yaml.YAMLError as e:
-        log2term('E', f'While opening config file: {e}')
-        exit
+        log2term('F', f'While opening config file: {e}')
+        os.kill(pid, signal.SIGINT)  # Kill server
 
     proxy_dict = config["proxy"]
     flask_users_dict = config["flask_users"]
@@ -722,7 +723,33 @@ def readYAML(filename=str):
                                    flask_users_dict["alt_port"])
 
 
-def servers_check():
+def server_check(addr: str, port: int) -> str:
+    nm = nmap3.Nmap()
+    res = nm.scan_top_ports(f"{addr}", args=f"-p {port}")
+    state = res[f"{addr}"]["ports"][0]["state"]
+    return state
+
+
+def servers_check() -> bool:
+    if server_check(flask_users.addr, flask_users.port) == 'closed':
+        return False
+
+    if server_check(flask_users_alt.addr, flask_users_alt.port) == 'closed':
+        return False
+
+    if server_check(flask_videos.addr, flask_videos.port) == 'closed':
+        return False
+
+    if server_check(flask_QAs.addr, flask_QAs.port) == 'closed':
+        return False
+
+    if server_check(flask_logs.addr, flask_logs.port) == 'closed':
+        return False
+
+    return True
+
+
+def users_server_check():
     original = ServerConfig(flask_users.addr, flask_users.port)
     alt = ServerConfig(flask_users_alt.addr, flask_users_alt.port)
 
@@ -750,8 +777,16 @@ def servers_check():
 
 
 if __name__ == "__main__":
+    global pid
+    pid = os.getpid()
+
     readYAML('config.yaml')
-    thread = threading.Thread(target=servers_check)
+
+    if servers_check() == False:
+        log2term("F", "At least one of the database access servers is down")
+        os.kill(pid, signal.SIGINT)  # Kill server
+
+    thread = threading.Thread(target=users_server_check)
     thread.start()
 
     app.run(host=me.addr, port=me.port, debug=True)
